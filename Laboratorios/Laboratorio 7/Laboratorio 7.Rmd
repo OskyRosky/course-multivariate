@@ -1,0 +1,928 @@
+---
+title: "Labo 7"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(mclust)
+library(knitr)
+library(DT)
+library(dplyr)
+library(reshape2)
+library(MVN)
+library(ggplot2)
+library(stats)
+library(cluster)
+library(mclust)
+library(factoextra)
+library(dendextend)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(ape)
+library(NbClust)
+library(factoextra)
+library(ggpubr)
+library(purrr)
+library(clustertend)
+library(fpc)
+library(pheatmap)
+library(d3heatmap)
+library(dendextend)
+library(clValid)
+#library(Rtsne)
+#library(RODBC)
+library(kableExtra)
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+
+# Análisis de Clusters (EFA) {.tabset .tabset-fade .tabset-pills}
+
+EL presente laboratorio expone el análisis de agrupamieto (Cluster Analysis). Se presenta:  
+
+1. Paquetes y funciones
+2. Distancias utilzadas
+3. Tipos de clusters: jerárquico y de reasignación
+4. Número de clusters
+5. Validación del cluster ---> calidad
+6. Comparación de diversos dendogramas
+7. Análisis de segmentación
+8. Elección del mejor algoritmo de clustering
+
+
+## Sitios web de referencia  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes a la aplicación Cluster Analysis: 
+
+https://rpubs.com/Joaquin_AR/310338 
+ https://rpubs.com/rdelgado/399475
+http://www.estadistica.net/Master-Econometria/Analisis_Cluster.pdf 
+ https://www.datanovia.com/en/blog/types-of-clustering-methods-overview-and-quick-start-r-code/
+https://uc-r.github.io/kmeans_clustering 
+ https://www.kaggle.com/hendraherviawan/customer-segmentation-using-rfm-analysis-r
+https://rpubs.com/vermaph/395036 
+ https://www.r-bloggers.com/customer-segmentation-part-1-k-means-clustering/
+https://inseaddataanalytics.github.io/INSEADAnalytics/CourseSessions/Sessions45/ClusterAnalysisReading.html 
+https://towardsdatascience.com/how-to-cluster-your-customer-data-with-r-code-examples-6c7e4aa6c5b1
+ https://analyzecore.com/2015/02/16/customer-segmentation-lifecycle-grids-with-r/
+http://www.rpubs.com/swapnilkura/ClusterAnalysis 
+ https://rpubs.com/williamsurles/310847
+https://rpubs.com/Damilolah/clustering  
+https://rpubs.com/shirokaner/320218 
+ http://www.sthda.com/english/wiki/print.php?id=234
+http://girke.bioinformatics.ucr.edu/GEN242/pages/mydoc/Rclustering.html
+
+## Datos del laboratorio {.tabset .tabset-fade}
+
+Para el presente laboratorio utilizaremos esecialmente los datos de Iris y  USArrests
+
+### Estructura de Iris
+
+Trabajamos con la más famosa base de datos en el mundo de la analítica: iris. Esta contiene mediciones de 150 flores iris de tres especies diferentes.
+
+Las tres clases del conjunto de datos Iris:
+
+Iris-setosa (n = 50) Iris-versicolor (n = 50) Iris-virginica (n = 50) Las cuatro características del conjunto de datos Iris:
+
+-Longitud del sepal en cm
+-Ancho sepal en cm
+-Longitud del pétalo en cm 
+-Anchura del pétalo en cm.
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+
+head(iris)
+str(iris)
+```
+
+### Estructura de USArrests
+
+El set de datos USArrests contiene información sobre el número de delitos (asaltos, asesinatos y secuestros) junto con el porcentaje de población urbana para cada uno de los 50 estados de USA. 
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+head(USArrests)
+str(USArrests)
+
+```
+
+
+## Funciones y librerías del cluster analysis {.tabset .tabset-fade}
+
+En el entorno de programación R existen múltiples paquetes que implementan algoritmos de clustering y funciones para visualizar sus resultados. En este documento se emplean los siguientes:
+
+stats: contiene las funciones dist() para calcular matrices de distancias,kmeans(), hclust(),  cuttree() para crear los clusters y plot.hclust() para visualizar los resultados.
+
+luster, mclust: contienen múltiples algoritmos de clustering y métricas para evaluarlos.
+
+factoextra: extensión basada en ggplot2 para crear visualizaciones de los resultados de clustering y su evaluación.
+
+dendextend: extensión para la customización de dendrogramas. 
+
+Recordar SIEMPRE escalar las variables
+
+### scale
+
+La estructura es :
+
+```{r}
+#scale(x, center = TRUE, scale = TRUE)
+```
+
+
+### kmeans
+
+La estructura es :
+
+```{r}
+#kMeans(x, centers, iter.max=10, num.seeds=10)
+```
+
+### fviz_cluster
+
+La estructura es :
+
+```{r}
+# fviz_cluster(object, data = NULL, choose.vars = NULL, stand = TRUE,
+#  axes = c(1, 2), geom = c("point", "text"), repel = FALSE,
+#  show.clust.cent = TRUE, ellipse = TRUE, ellipse.type = "convex",
+#  ellipse.level = 0.95, ellipse.alpha = 0.2, shape = NULL,
+#  pointsize = 1.5, labelsize = 12, main = "Cluster plot", xlab = NULL,
+#  ylab = NULL, outlier.color = "black", outlier.shape = 19,
+#  ggtheme = theme_grey(), ...)
+```
+
+
+### hclust
+
+La estructura es :
+
+```{r}
+# hclust(d, method = "complete", members = NULL)
+# S3 method for hclust
+# plot(x, labels = NULL, hang = 0.1, check = TRUE,
+#      axes = TRUE, frame.plot = FALSE, ann = TRUE,
+#      main = "Cluster Dendrogram",
+#      sub = NULL, xlab = NULL, ylab = "Height", …)
+```
+
+
+
+## Estadísticas descriptivas  {.tabset .tabset-fade}
+
+RECORDAR
+
+Normalmente estaremos trabajando con variables continuas. Deben analizar densidades, correlaciones, etc.,  decir de forma individual y
+en conjunto que pasa con la descripción de las variables a utilizar.
+
+## Algunas medidas de distancias {.tabset .tabset-fade}
+
+Este apartado aplica para los clusters de reasignación
+
+### Distancia euclidia
+
+ La distancia euclídea entre las dos observaciones equivale a la raíz cuadrada de la suma de las longitudes de los segmentos rojos que unen cada par de puntos. Tiene en cuenta por lo tanto el desplazamiento individual de cada una de las variables. 
+ 
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+
+library(ggplot2)
+observacion_a <- c(4, 4.5, 4, 7.5, 7, 6, 5, 5.5, 5, 6)
+observacion_b <- c(4, 4.5, 4, 7.5, 7, 6, 5, 5.5, 5, 6) + 4
+datos <- data.frame(observacion = rep(c("a", "b"), each = 10),
+                    valor = c(observacion_a, observacion_b),
+                    predictor = 1:10)
+ggplot(data = datos, aes(x = as.factor(predictor), y = valor,
+                         colour = observacion)) +
+  geom_path(aes(group = observacion)) +
+  geom_point() +
+  geom_line(aes(group = predictor), colour = "firebrick", linetype = "dashed") +
+  labs(x = "predictor") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+ 
+
+###  Distancia de Manhattan
+
+La distancia de Manhattan, también conocida como taxicab metric, rectilinear distance o L1 distance, define la distancia entre dos puntos p y q como el sumatorio de las diferencias absolutas entre cada dimensión. Esta medida se ve menos afectada por outliers (es más robusta) que la distancia euclídea debido a que no eleva al cuadrado las diferencias.
+
+a siguiente imagen muestra una comparación entre la distancia euclídea (segmento azul) y la distancia de manhattan (segmento rojo y verde) en un espacio bidimensional. Existen múltiples caminos para unir dos puntos con el mismo valor de distancia de manhattan, ya que su valor es igual al desplazamiento total en cada una de las dimensiones.
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+
+datos <- data.frame(observacion = c("a", "b"), x = c(2,7), y = c(2,7))
+manhattan <- data.frame(
+              x = rep(2:6, each = 2),
+              y = rep(2:6, each = 2) + rep(c(0,1), 5),
+              xend = rep(2:6, each = 2) + rep(c(0,1), 5),
+              yend = rep(3:7, each = 2))
+
+manhattan_2 <- data.frame(
+                x = c(2, 5, 5, 7),
+                y = c(2, 2, 4, 4),
+                xend = c(5, 5, 7, 7),
+                yend = c(2, 4, 4, 7))
+
+ggplot(data = datos, aes(x = x, y = y)) +
+geom_segment(aes(x = 2, y = 2, xend = 7, yend = 7), color = "blue", size = 1.2) +
+geom_segment(data = manhattan, aes(x = x, y = y, xend = xend, yend = yend),
+             color = "red", size = 1.2) +
+geom_segment(data = manhattan_2, aes(x = x, y = y, xend = xend, yend = yend),
+             color = "green3", size = 1.2) +
+geom_point(size = 3) +
+theme(panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(size = 2),
+      panel.background = element_rect(fill = "gray",
+                                      colour = "white",
+                                      size = 0.5, linetype = "solid"))
+
+```
+
+
+
+
+## Clusters de reasignación: K-medias   {.tabset .tabset-fade}
+
+El set de datos USArrests contiene información sobre el número de delitos (asaltos, asesinatos y secuestros) junto con el porcentaje de población urbana para cada uno de los 50 estados de USA. Se pretende estudiar si existe una agrupación subyacente de los estados empleando K-means-clustering.
+
+El paquete factoextra creado contiene funciones que facilitan en gran medida la visualización y evaluación de los resultados de clustering. Si se emplea K-means-clustering con distancia euclídea hay que asegurarse de que las variables empleadas son de tipo continuo, ya que trabaja con la media de cada una de ellas.
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+data("USArrests")
+head(USArrests)
+str(USArrests)
+```
+
+IMPORTANTE, se debe aplicar escalamiento para que todas las variables posean la misma escala de medición.
+
+```{r}
+datos <- scale(USArrests)
+```
+
+Veamos una representación de los datos, para 4 clusters (K=4)
+
+```{r}
+set.seed(123)
+km_clusters <- kmeans(x = datos, centers = 4, nstart = 50)
+
+# Las funciones del paquete factoextra emplean el nombre de las filas del
+# dataframe que contiene los datos como identificador de las observaciones.
+# Esto permite añadir labels a los gráficos.
+fviz_cluster(object = km_clusters, data = datos, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE) +
+  labs(title = "Resultados clustering K-means") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+Otra forma de representar los resultados obtenidos con un clustering k-means es mediante una network que muestre las observaciones conectadas por clusters. Es importante tener en cuenta que, a diferencia de la proyección PCA, en esta representación las distancias son arbitrarias, solo importan las conexiones.
+
+```{r}
+set.seed(123)
+km_clusters <- kmeans(x = datos, centers = 4, nstart = 50)
+resultados <- data.frame(ciudad  = names(km_clusters$cluster),
+                         cluster = as.factor(km_clusters$cluster)) %>%
+              arrange(cluster)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+datos_graph <- graph_from_data_frame(d = resultados, directed = TRUE)
+datos_graph <- as_tbl_graph(datos_graph)
+
+# Se añade información sobre a que cluster pertenece cada observacion
+datos_graph <- datos_graph %>%
+  activate(nodes) %>%
+  left_join(resultados, by = c("name" = "ciudad"))
+
+ggraph(graph = datos_graph) +
+  geom_edge_link(alpha = 0.5) +
+  geom_node_point(aes(color = cluster)) +
+  geom_node_text(aes(label = name), repel = TRUE, alpha = 0.5, size = 3) +
+  labs(title = "Resultados clustering K-means") +
+  theme_graph()
+```
+
+
+## Clusters jerárquicos  {.tabset .tabset-fade}
+
+  Hierarchical clustering es una alternativa a los métodos de partitioning clustering que no requiere que se pre-especifique el número de clusters. Los métodos que engloba el hierarchical clustering se subdividen en dos tipos dependiendo de la estrategia seguida para crear los grupos:
+
+Agglomerative clustering (bottom-up): el agrupamiento se inicia en la base del árbol, donde cada observación forma un cluster individual. Los clusters se van combinado a medida que la estructura crece hasta converger en una única “rama” central.
+
+Divisive clustering (top-down): es la estrategia opuesta al agglomerative clustering, se inicia con todas las observaciones contenidas en un mismo cluster y se suceden divisiones hasta que cada observación forma un cluster individual.
+
+En ambos casos, los resultados pueden representarse de forma muy intuitiva en una estructura de árbol llamada dendrograma. 
+
+En este se debe antes transformar los datos a distancias
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+
+
+# Crear las distancia y definir el método 
+dd <- dist(scale(USArrests), method = "euclidean")
+hc <- hclust(dd, method = "ward.D2")
+```
+
+
+Veamos diversas modalidaes 
+
+### Tipos de clusters jerárquicos
+
+Referencia: http://www.sthda.com/english/wiki/beautiful-dendrogram-visualizations-in-r-5-must-known-methods-unsupervised-machine-learning 
+
+Mediante el plot.hclust(), el más sencillo 
+
+```{r}
+plot(hc)
+# Put the labels at the same height: hang = -1
+plot(hc, hang = -1, cex = 0.6)
+
+```
+
+Mediante el plot.dendogram(),
+
+```{r}
+# Convert hclust into a dendrogram and plot
+hcd <- as.dendrogram(hc)
+# Default plot
+plot(hcd, type = "rectangle", ylab = "Height")
+# Zoom in to the first dendrogram
+plot(hcd, xlim = c(1, 20), ylim = c(1,8))
+# Triangle plot
+plot(hcd, type = "triangle", ylab = "Height")
+
+
+```
+
+
+Mediante el Phylogenetic trees
+
+Este presenta diversas formas de representar los clusters
+
+```{r}
+# Default plot
+plot(as.phylo(hc), cex = 0.6, label.offset = 0.5)
+# Cladogram
+plot(as.phylo(hc), type = "cladogram", cex = 0.6, 
+     label.offset = 0.5)
+# Unrooted
+plot(as.phylo(hc), type = "unrooted", cex = 0.6,
+     no.margin = TRUE)
+# Fan
+plot(as.phylo(hc), type = "fan")
+# Radial
+plot(as.phylo(hc), type = "radial")
+
+# Change the appearance
+# change edge and label (tip)
+plot(as.phylo(hc), type = "cladogram", cex = 0.6,
+     edge.color = "steelblue", edge.width = 2, edge.lty = 2,
+     tip.color = "steelblue")
+```
+
+
+
+## Número de clusters  {.tabset .tabset-fade}
+
+Una forma empírica de seleccionar el número de clusters es mediante técnicas analíticas que guian en la correcta escogencia del número de grupos. Veamos
+los procedimientos tanto para los métodos de reasignación como los métodos herárquicos
+
+### Métodos de reasignación: K-medias
+
+Existen MUCHAS técnicas, pero veamos 3
+-Elbow method
+-Average silhouette method
+-Gap statistic method
+
+```{r}
+df <- scale(USArrests)
+head(df)
+```
+
+Utilizamos la función fviz_nbclust
+
+```{r}
+#fviz_nbclust(x, FUNcluster, method = c("silhouette", "wss", "gap_stat"))
+```
+
+Veamos los resultados. ¿CUántos grupos según cada técnica?
+
+```{r}
+# Elbow method
+fviz_nbclust(df, kmeans, method = "wss") +
+    geom_vline(xintercept = 4, linetype = 2)+
+  labs(subtitle = "Elbow method")
+
+# Silhouette method
+fviz_nbclust(df, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")
+
+# Gap statistic
+# nboot = 50 to keep the function speedy. 
+# recommended value: nboot= 500 for your analysis.
+# Use verbose = FALSE to hide computing progression.
+set.seed(123)
+fviz_nbclust(df, kmeans, nstart = 25,  method = "gap_stat", nboot = 50)+
+  labs(subtitle = "Gap statistic method")
+```
+
+¿Cuántos?
+
+En el siguiente link hay otros métodos: https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92
+
+### Métodos de herárquicos
+
+ Además de representar en un dendrograma la similitud entre observaciones, se tiene que poder identificar el número de clusters creados y qué observaciones forman parte de cada uno. Si se realiza un corte horizontal a una determinada altura del dendrograma, el número de ramas que sobrepasan (en sentido ascendente) dicho corte se corresponde con el número de clusters. La siguiente imagen muestra dos veces el mismo dendrograma. Si se realiza el corte a la altura de 5, se obtienen dos clusters, mientras que si se hace a la de 3.5 se obtienen 4. La altura de corte tiene por lo tanto la misma función que el valor K en K-means-clustering: controla el número de clusters obtenidos.
+ 
+ 
+```{r}
+datos <- USArrests
+datos <- scale(datos)
+set.seed(101)
+
+hc_euclidea_completo <- hclust(d = dist(x = datos, method = "euclidean"),
+                               method = "complete")
+
+fviz_dend(x = hc_euclidea_completo, k = 2, cex = 0.6) +
+  geom_hline(yintercept = 5.5, linetype = "dashed") +
+  labs(title = "Herarchical clustering",
+       subtitle = "Distancia euclídea, Lincage complete, K=2")
+```
+ 
+ 
+```{r}
+fviz_dend(x = hc_euclidea_completo, k = 4, cex = 0.6) +
+  geom_hline(yintercept = 3.5, linetype = "dashed") +
+  labs(title = "Herarchical clustering",
+       subtitle = "Distancia euclídea, Lincage complete, K=4")
+```
+
+ Dos propiedades adicionales se derivan de la forma en que se generan los clusters en el método de hierarchical clustering:
+
+Dada la longitud variable de las ramas, siempre existe un intervalo de altura para el que cualquier corte da lugar al mismo número de clusters. En el ejemplo anterior, todos los cortes entre las alturas 5 y 6 tienen como resultado los mismos 2 clusters.
+
+Con un solo dendrograma se dispone de la flexibilidad para generar cualquier número de clusters desde 1 a n. La selección del número óptimo puede valorarse de forma visual, tratando de identificar las ramas principales en base a la altura a la que ocurren las uniones. En el ejemplo expuesto es razonable elegir entre 2 o 4 clusters.
+
+     Una forma menos frecuente de representar los resultados de un hierarchical clustering es combinándolos con una reducción de dimensionalidad por PCA. Primero, se calculan las componentes principales y se representan las observaciones en un scatterplot empleando las dos primeras componentes, finalmente se colorean los clusters mediante elipses.
+     
+```{r}
+fviz_cluster(object = list(data=datos, cluster=cutree(hc_euclidea_completo, k=4)),
+             ellipse.type = "convex", repel = TRUE, show.clust.cent = FALSE,
+             labelsize = 8)  +
+  labs(title = "Hierarchical clustering + Proyección PCA",
+       subtitle = "Distancia euclídea, Lincage complete, K=4") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+     
+Sabiendo el número de cluster, también se podría modifcar el dendograma y presentar las modalidades vistas con el corte deseado
+
+```{r}
+# Cut the dendrogram into 4 clusters
+colors = c("red", "blue", "green", "black")
+clus4 = cutree(hc, 4)
+plot(as.phylo(hc), type = "fan", tip.color = colors[clus4],
+     label.offset = 1, cex = 0.7)
+```
+
+## Validación de análisis de clusters {.tabset .tabset-fade}
+
+   Antes de aplicar un método de clustering a los datos es conveniente evaluar si hay indicios de que realmente existe algún tipo de agrupación en ellos. A este proceso se le conoce como assessing cluster tendecy y puede llevarse a cabo mediante test estadísticos (Hopkins statistic) o de forma visual (Visual Assessment of cluster Tendency). Para ilustrar la importancia de este pre-análisis inicial, se aplica clustering a dos sets de datos, uno que sí contiene grupos reales (iris) y otro aleatoriamente simulado que no.
+
+```{r}
+
+# Se elimina la columna que contiene la especie de planta
+datos_iris <- iris[, -5]
+
+# Se generan valores aleatorios dentro del rango de cada variable. Se utiliza la
+# función map del paquete purrr.
+datos_simulados <- map_df(datos_iris,
+                          .f = function(x){runif(n = length(x),
+                                                 min = min(x),
+                                                 max = max(x))
+                                          }
+                          )
+
+# Estandarización de los datos
+datos_iris      <- scale(datos_iris)
+datos_simulados <- scale(datos_simulados)
+```
+
+ Una representación gráfica permite comprobar que el set de datos iris sí contiene grupos reales, mientras que los datos simulados no. Al haber más de dos variables es necesario reducir la dimensionalidad mediante un Principal Component Analysis.
+ 
+```{r}
+
+pca_datos_iris      <- prcomp(datos_iris)
+pca_datos_simulados <- prcomp(datos_simulados)
+p1 <- fviz_pca_ind(X = pca_datos_iris, habillage = iris$Species,
+                   geom = "point", title = "PCA - datos iris",
+                   pallete = "jco") +
+      theme_bw() + theme(legend.position = "bottom")
+p2 <- fviz_pca_ind(X = pca_datos_simulados, geom = "point",
+                   title = "PCA - datos simulados", pallete = "jco") +
+      theme_bw() + theme(legend.position = "bottom")
+
+ggarrange(p1, p2, common.legend = TRUE)
+```
+ 
+Véase que ocurre cuando se aplican métodos de clustering a estos dos sets de datos.
+
+```{r}
+# K-means clustering
+km_datos_iris <- kmeans(x = datos_iris, centers = 3)
+p1 <- fviz_cluster(object = km_datos_iris, data = datos_iris,
+                   ellipse.type = "norm", geom = "point", main = "Datos iris",
+                   stand = FALSE, palette = "jco") +
+      theme_bw() + theme(legend.position = "none")
+km_datos_simulados <- kmeans(x = datos_simulados, centers = 3)
+p2 <- fviz_cluster(object = km_datos_simulados, data = datos_simulados,
+                   ellipse.type = "norm", geom = "point",
+                   main = "Datos simulados", stand = FALSE, palette = "jco") +
+      theme_bw() + theme(legend.position = "none")
+
+# Hierarchical clustering
+p3 <- fviz_dend(x = hclust(dist(datos_iris)), k = 3, k_colors = "jco",
+                show_labels = FALSE, main = "Datos iris")
+p4 <- fviz_dend(x = hclust(dist(datos_simulados)), k = 3, k_colors = "jco",
+                show_labels = FALSE, main = "Datos simulados")
+
+ggarrange(p1, p2)
+```
+
+```{r}
+ggarrange(p3, p4)
+```
+
+
+### Hopkins statistics
+
+ Valores de H en torno a 0.5 indican que son muy cercanos el uno al otro, es decir, que los datos estudiados se distribuyen uniformemente y que por lo tanto no tiene sentido aplicar clustering. Cuanto más se aproxime a 0 el estadístico H, más evidencias se tienen a favor de que existen agrupaciones en los datos y de que, si se aplica clustering correctamente, los grupos resultantes serán reales. La función hopkins() del paquete clustertend permite calcular el estadístico Hopkins.
+
+```{r}
+
+set.seed(321)
+
+# Estadístico H para el set de datos iris
+hopkins(data = datos_iris, n = nrow(datos_iris) - 1)
+
+# Estadístico H para el set de datos simulado
+hopkins(data = datos_simulados, n = nrow(datos_simulados) - 1)
+```
+
+
+### Visual Assessment of cluster Tendency (VAT)
+
+VAT es método que permite evaluar visualmente si los datos muestran indicios de algún tipo de agrupación. La idea es sencilla:
+
+Se calcula una matriz de distancias euclídeas entre todos los pares de observaciones.
+
+Se reordena la matriz de distancias de forma que las observaciones similares están situadas cerca unas de otras (ordered dissimilarity matrix).
+
+Se representa gráficamente la matriz de distancias ordenada, empleando un gradiente de color para el valor de las distancias. Si existen agrupaciones subyacentes en los datos se forma un patrón de bloques cuadrados.
+
+```{r}
+
+dist_datos_iris      <- dist(datos_iris, method = "euclidean")
+dist_datos_simulados <- dist(datos_simulados, method = "euclidean")
+
+p1 <- fviz_dist(dist.obj = dist_datos_iris, show_labels = FALSE) +
+      labs(title = "Datos iris") + theme(legend.position = "bottom")
+p2 <- fviz_dist(dist.obj = dist_datos_simulados, show_labels = FALSE) +
+      labs(title = "Datos simulados") + theme(legend.position = "bottom")
+
+ggarrange(p1, p2)
+```
+
+
+## Calidad del cluster{.tabset .tabset-fade}
+
+Veremos la validación interna
+
+### Silhouette width
+
+Cuantifica cómo de buena es la asignación que se ha hecho de una observación comparando su similitud con el resto de observaciones del mismo cluster frente a las de los otros clusters
+
+Su valor puede estar entre -1 y 1, siendo valores altos un indicativo de que la observación se ha asignado al cluster correcto. Cuando su valor es próximo a cero significa que la observación se encuentra en un punto intermedio entre dos clusters. Valores negativos apuntan a una posible asignación incorrecta de la observación. Se trata por lo tanto de un método que permite evaluar el resultado del clustering a múltiples niveles:
+
+La calidad de asignación de cada observación por separado. Permitiendo identificar potenciales asignaciones erróneas (valores negativos de silhouette).
+
+La calidad de cada cluster a partir del promedio de los índices silhouette de todas las observaciones que lo forman. Si por ejemplo se han introducido demasiados clusters, es muy probable que algunos de ellos tengan un valor promedio mucho menor que el resto.
+
+La calidad de la estructura de clusters en su conjunto a partir del promedio de todos los índices silhouette.
+
+```{r}
+# Se emplean los datos iris excluyendo la variable Species
+datos <- scale(iris[, -5])
+km_clusters <- eclust(x = datos, FUNcluster = "kmeans", k = 3, seed = 123,
+                      hc_metric = "euclidean", nstart = 50, graph = FALSE)
+fviz_silhouette(sil.obj = km_clusters, print.summary = TRUE, palette = "jco",
+                ggtheme = theme_classic()) 
+```
+
+La función eclust() almacena, además de la información devuelta por la función de clustering empleada, en este caso kmeans, información sobre los coeficientes silhouette individuales y por cluster, el cluster al que se ha asignado cada observación y el cluster vecino más próximo (el segundo mejor candidato).
+
+```{r}
+# Media silhouette por cluster
+km_clusters$silinfo$clus.avg.widths
+```
+
+```{r}
+# Coeficiente silhouette para cada observación
+head(km_clusters$silinfo$widths)
+```
+
+  El cluster número 2 (amarillo) tiene observaciones con valores de silhouette próximos a 0 e incluso negativos, lo que indica que esas observaciones podrían estar mal clasificadas. Viendo la representación gráfica del clustering, cabe esperar que sean observaciones que están situadas en la frontera entre los clusters 2 y 3 ya que solapan.
+
+```{r}
+km_clusters$silinfo$widths %>% filter(sil_width <= 0)
+
+p <- fviz_cluster(object = km_clusters, geom = "point", ellipse.type  = "norm",
+                  palette = "jco") 
+p + geom_point(data = p$data[c(112, 128),], colour = "firebrick", size = 2.5) +
+    theme_bw() + theme(legend.position = "bottom")
+```
+
+Véase cómo cambia el resultado si en lugar de 3 clusters (número correcto de especies), se crean 5.
+
+```{r}
+km_clusters <- eclust(x = datos, FUNcluster = "kmeans", k = 5, seed = 123, 
+                      hc_metric = "euclidean", nstart = 50, graph = FALSE)
+p1 <- fviz_cluster(object = km_clusters, geom = "point", ellipse.type  = "norm",
+                   palette = "jco") +
+      theme_classic() + theme(legend.position = "none") 
+
+p2 <- fviz_silhouette(sil.obj = km_clusters, print.summary = FALSE,
+                      palette = "jco", ggtheme = theme_classic()) +
+      theme(legend.position = "none")
+
+ggarrange(p1, p2)
+```
+
+### Índice Dunn
+
+Si la estructura contiene clusters compactos y bien separados, el numerador es grande y el denominador pequeño, dando lugar a valores altos de D. El objetivo por lo tanto es maximizar el índice Dunn. Esta forma de evaluar la calidad del clustering tiene un inconveniente. Si todos los clusters tienen un comportamiento ideal excepto uno, cuya calidad es baja, dado que el denominador emplea el máximo en lugar de la media, el índice estará totalmente influenciado por este cluster enmascarando al resto. Es importante tener en cuenta que se trata de un indicador de tipo “el peor de los casos”.
+
+```{r}
+# Se emplean los datos iris excluyendo la variable Species
+datos <- scale(iris[, -5])
+
+# K-means clustering con k = 3
+set.seed(321)
+km_clusters <- kmeans(x = dist(datos, method = "euclidean"), centers = 3,
+                      nstart = 50)
+# Cálculo de índices (se calculan un total de 34 índices y parámetros)
+km_indices <- cluster.stats(d = dist(datos, method = "euclidean"), 
+                            clustering = km_clusters$cluster)
+
+# Medidas de homogeneidad y separación
+km_indices$average.within
+
+km_indices$average.between
+```
+
+```{r}
+km_indices$dunn
+```
+
+
+## El heatmap  {.tabset .tabset-fade}
+
+ Los heatmaps son el resultado obtenido al representar una matriz de valores en la que, en lugar de números, se muestra un gradiente de color proporcional al valor de cada variable en cada posición. La combinación de un dendrograma con un heatmap permite ordenar por semejanza las filas y o columnas de la matriz, a la vez que se muestra con un código de colores el valor de las variables. Se consigue así representar más información que con un simple dendrograma y se facilita la identificación visual de posibles patrones característicos de cada cluster.
+
+A continuación, se muestran algunos ejemplos con cada una de estas funciones:
+
+```{r}
+datos <- mtcars
+# Para que las variables sean comparables bajo un mismo esquema de colores se
+# estandarizan.
+datos <- scale(datos)
+heatmap(x = datos, scale = "none",
+        distfun = function(x){dist(x, method = "euclidean")},
+        hclustfun = function(x){hclust(x, method = "average")},
+        cexRow = 0.7)
+```
+
+```{r}
+colores <- colorRampPalette(c("red", "white", "blue"))(256)
+heatmap(x = datos, scale = "none", col = colores, cexRow = 0.7)
+```
+
+```{r}
+# Paleta de color viridis
+library(viridis)
+colores <- viridis(256)
+heatmap(x = datos, scale = "none", col = colores,
+        distfun = function(x){dist(x, method = "euclidean")},
+        hclustfun = function(x){hclust(x, method = "average")},
+        cexRow = 0.7)
+```
+
+```{r}
+library(gplots)
+heatmap.2(x = datos, scale = "none", col = bluered(256),
+          distfun = function(x){dist(x, method = "euclidean")},
+          hclustfun = function(x){hclust(x, method = "average")},
+          density.info = "none",
+          trace = "none", cexRow = 0.7)
+```
+
+```{r}
+pheatmap(mat = datos, scale = "none", clustering_distance_rows = "euclidean",
+         clustering_distance_cols = "euclidean", clustering_method = "average",
+         cutree_rows = 4, fontsize = 6)
+```
+
+```{r}
+# Al tratarse de html no puede visualizarse en word o PDF
+d3heatmap(x = datos, k_row = 4, k_col = 2, scale = "none",
+          distfun = function(x){dist(x, method = "euclidean")},
+          hclustfun = function(x){hclust(x, method = "average")})
+```
+
+
+
+## Perfiles o segmentaciones  {.tabset .tabset-fade}
+
+Acá se debe de describir los clusters como tal. Es realizar estadísticas descriptivas para entender su composición.
+
+Un ejemplo con una tabla: https://rpubs.com/vermaph/395036
+
+```{r}
+library("ggplot2")  # For visualizations
+library("cluster")  # For calculating the Gower Distance
+library("Rtsne")    # For visualizing the clustering in 2-D
+library("RODBC")    # For connecting SQL RFM view with R
+library("dplyr")
+library("kableExtra")
+#dbconnection <- odbcDriverConnect("Driver=ODBC Driver 11 for SQL Server;Server=SCOTT\\SQLEXPRESS; Database=SUPERMARKET;Uid=; Pwd=; trusted_connection=yes")
+#Customer_Data <- sqlQuery(dbconnection,paste("select * from RFM;"))
+#odbcClose(dbconnection)
+
+## Calculate Gower Distance
+#gower_dist <- daisy(Customer_Data[,-1],metric = "gower", type = list(logratio = c(8:13))) 
+# Log transformation for positively skewed variables: FAMILY_TOT_SALES, FAMILY_TOT_VISITS
+
+
+## Calculate optimal number of clusters
+#sil_width <- c(NA)
+#for(i in 2:20){
+#  pam_fit<-pam(gower_dist, diss = TRUE,k = i)  # PAM: Partitioning Around Medoids 
+#  sil_width[i]<-pam_fit$silinfo$avg.width
+#}
+#tab<-data.frame(x=1:20,sil_width=sil_width)
+
+#pam_fit<-pam(gower_dist, diss=TRUE, k = 7)
+#Customer_Data<-cbind(Customer_Data, Group = pam_fit$clustering)
+
+#tsne_obj <- Rtsne(gower_dist, is_distance = TRUE)
+#tsne_data <- tsne_obj$Y %>%
+#  data.frame() %>%
+#  setNames(c("X", "Y")) %>%
+#  mutate(cluster = factor(pam_fit$clustering),
+#         name = Customer_Data$H_KEY)
+
+#ggplot(aes(x = X, y = Y), data = tsne_data) + geom_point(aes(color = cluster)) + ggtitle("Customer Segments") + theme(plot.title = element_text(hjust = 0.5))
+
+#Customer_Data %>% 
+#  mutate(Group = as.factor(Group)) %>%
+#  group_by(Group) %>%
+#  summarize(Avg_sales = round(mean(ANNUAL_SALES),2), 
+#            Avg_visits = round(mean(ANNUAL_VISITS),2), 
+#            Avg_basket_value = round(mean(ANNUAL_BASKET_VALUE),2),
+#            Avg_Recency = round(mean(RECENCY),2),
+#            Avg_Frequency = round(mean(FREQUENCY),2),
+#            Avg_Monetary = round(mean(MONETARY),2),
+#            Count_of_Members = n()
+#            ) %>%
+#  arrange(Group) %>%
+#  mutate_if(is.numeric, function(x) {
+#    cell_spec(x, bold = T, 
+#              color = spec_color(x, end = 0.9),
+#              font_size = spec_font_size(x))
+#  }) %>%
+#  kable(escape = F, align = "c") %>%
+#  kable_styling(c("striped", "condensed"), full_width = F)
+```
+
+
+Interpretación
+
+Going by the above results we can say that:
+
+Group 3: Are High Value - High Freqeuncy customers because they shop for higher basket values, are freqeunt and have low recency values (meaning they have been shopping recently)
+Group 6: Are High Value - Low Freqeuncy customers because they shop for higher basket values, but have low freqeuncy of shopping
+Group 7: Are Mid Value - High Frequency customers
+Group 2: Are Mid Value - Low Frequency customers
+Group 1,4 & 5: Are Low Value customers because their basket size are very small
+
+
+## Otros puntos  {.tabset .tabset-fade}
+
+### Comparación de dendogramas 
+
+ Dados los muchos parámetros que se tienen que determinar a lo largo del proceso de hierarchical clustering, es frecuente que el analista genere varios dendrogramas para compararlos y escoger finalmente uno de ellos. Existen varias formas de estudiar las diferencias entre dendrogramas, dos de las más utilizadas son: la comparación visual y el cálculo de correlación entre dendrogramas. Ambos métodos pueden aplicarse con las funciones tanglegram() y cor.dendlist() del paquete dendextend. Se emplea el set de datos USArrests con el objetivo de generar dendrogramas que agrupen los diferentes estados por su similitud en el porcentaje de asesinatos, asaltos, secuestros y proporción de población rural. Se comparan los resultados obtenidos empleando linkage average y ward.D2.
+
+```{r}
+# Para facilitar la interpretación se simplifican los dendrogramas empleando
+# únicamente 10 estados
+
+set.seed(123)
+datos <- USArrests[sample(1:50, 10), ]
+
+# Cálculo matriz de distancias
+mat_dist <- dist(x = datos, method = "euclidean")
+
+# Cálculo de hierarchical clustering
+hc_average <- hclust(d = mat_dist, method = "average")
+hc_ward    <- hclust(d = mat_dist, method = "ward.D2")
+
+# Las funciones del paquete dendextend trabajan con objetos de tipo dendrograma,
+# para obtenerlos se emplea la función as.dendogram()
+dend_1 <- as.dendrogram(hc_average)
+dend_2 <- as.dendrogram(hc_ward)
+```
+
+#### Comparación visual  
+
+   La función tanglegram() representa dos dendrogramas a la vez, enfrentados uno al otro, y conecta las hojas terminales con líneas. Los nodos que aparecen solo en uno de los dendrogramas, es decir, que están formados por una combinación de observaciones que no se da en el otro, aparecen destacados con líneas discontinuas.
+   
+```{r}
+tanglegram(dend1 = dend_1, dend2 = dend_2, highlight_distinct_edges = TRUE,
+           common_subtrees_color_branches = TRUE)
+```
+
+#### Comparación por correalación 
+
+Con la función cor.dendlist() se puede calcular la matriz de correlación entre dendrogramas basada en las distancias de Cophenetic o Baker.
+
+```{r}
+# Se almacenan los dendrogramas a comparar en una lista
+list_dendrogramas <- dendlist(dend_1, dend_2)
+cor.dendlist(dend = list_dendrogramas, method = "cophenetic")
+
+# Se pueden obtener comparaciones múltiples incluyendo más de dos dendrogramas en 
+# la lista pasada como argumento
+dend_1 <- datos %>% dist(method = "euclidean") %>% hclust(method = "average") %>%
+          as.dendrogram()
+dend_2 <- datos %>% dist(method = "euclidean") %>% hclust(method = "ward.D2") %>%
+          as.dendrogram()
+dend_3 <- datos %>% dist(method = "euclidean") %>% hclust(method = "single") %>%
+          as.dendrogram()
+dend_4 <- datos %>% dist(method = "euclidean") %>% hclust(method = "complete") %>%
+          as.dendrogram()
+list_dendrogramas <- dendlist("average" = dend_1, "ward.D2" = dend_2,
+                             "single" = dend_3, "complete" = dend_4)
+cor.dendlist(dend = list_dendrogramas, method = "cophenetic") %>% round(digits= 3)
+```
+
+```{r}
+# Si solo se comparan dos dendrogramas se puede emplear la función cor_cophenetic
+cor_cophenetic(dend1 = dend_1, dend2 = dend_2)
+```
+
+### Elección del mejor algoritmo de clustering
+
+  Decidir cuál es el método de clustering más adecuado para un determinado set de datos es un proceso complejo ya que se tienen que analizar uno a uno múltiples índices, estadísticos y parámetros (número de clusters, homogeneidad, separación, significancia…). El paquete clValid agiliza el proceso ofreciendo la posibilidad de comparar, de forma simultánea, múltiples algoritmos de clustering en una única función. Empleando el set de datos iris, se evalúan los métodos de clustering (K-means, hierarchical y PAM), empleando medidas de validación internas (conectividad, silhouette, Dunn y estabilidad), para un rango de cluster de 2 a 6.
+
+
+```{r}
+datos <- scale(iris[, -5])
+comparacion <- clValid(obj = datos, nClust = 2:6,
+                       clMethods = c("hierarchical", "kmeans", "pam"),
+                       validation = c("stability", "internal"))
+summary(comparacion)
+```
+
+La mayoría de índices coinciden en que el mejor método es el hierarchical clustering con 2 clusters. Sin embargo, dado que se conoce la verdadera clasificación de las observaciones (Species), se sabe que realmente existen 3 grupos en la población. 
+

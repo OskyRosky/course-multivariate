@@ -1,0 +1,203 @@
+---
+title: "Labo 1"
+author: "Oscar Centeno Mora - IAM"
+date: ""
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plotly)
+library(DT)
+library(ggplot2)
+library(forecast)
+library(tidyverse)
+library(date)
+library(lubridate)
+library(xts)        # To make the convertion data-frame / xts format
+library(dygraphs)
+library(ggExtra)
+library(plotly)
+library(gapminder)
+library(gridExtra)
+library(rattle)
+library(ggridges)
+library(vioplot)
+library(likert)
+library(fmsb) 
+library(wordcloud)
+library(reshape)
+library(tm)
+library(GGally)
+library(car)
+library(RColorBrewer)
+library(ellipse)
+library(corrgram)
+library(treemap)
+library(d3Tree)
+library(dendextend)
+library(ggraph)
+library(igraph)
+library(networkD3)
+library(circlize)
+library(ggmap)
+library(cartography)
+library(maps)
+library(geosphere)
+library(DT)
+library(kableExtra)
+library(formattable)
+library(digest)
+library(devtools)
+
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+
+# REDES SOCIALES {.tabset .tabset-fade .tabset-pills}
+
+## Gráficos multivariados {.tabset .tabset-fade}
+
+### Redes sociales
+
+#### Redes sociales simples
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data
+set.seed(1)
+data=matrix(sample(0:1, 100, replace=TRUE, prob=c(0.8,0.2)), nc=10)
+network=graph_from_adjacency_matrix(data , mode='undirected', diag=F )
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Default network
+par(mar=c(0,0,0,0))
+plot(network)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+plot(network,
+    vertex.color = rgb(0.8,0.2,0.2,0.9),           # Node color
+    vertex.frame.color = "Forestgreen",            # Node border color
+    vertex.shape=c("circle","square"),             # One of “none”, “circle”, “square”, “csquare”, “rectangle” “crectangle”, “vrectangle”, “pie”, “raster”, or “sphere”
+    vertex.size=c(15:24),                          # Size of the node (default is 15)
+    vertex.size2=NA,                               # The second size of the node (e.g. for a rectangle)
+    )
+
+```
+
+#### Fromas en las redes 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create data
+data=matrix(sample(0:1, 400, replace=TRUE, prob=c(0.8,0.2)), nrow=20)
+network=graph_from_adjacency_matrix(data , mode='undirected', diag=F )
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+par(mfrow=c(2,2), mar=c(1,1,1,1))
+plot(network, layout=layout.sphere, main="sphere")
+plot(network, layout=layout.circle, main="circle")
+plot(network, layout=layout.random, main="random")
+plot(network, layout=layout.fruchterman.reingold, main="fruchterman.reingold")
+```
+
+#### Otros formatos de visualizar las redes 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create fake data
+src <- c("A", "A", "A", "A",
+        "B", "B", "C", "C", "D")
+target <- c("B", "C", "D", "J",
+            "E", "F", "G", "H", "I")
+networkData <- data.frame(src, target)
+
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Plot
+simpleNetwork(networkData)
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data(MisLinks)
+data(MisNodes)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+forceNetwork(Links = MisLinks, Nodes = MisNodes,
+            Source = "source", Target = "target",
+            Value = "value", NodeID = "name",
+            Group = "group", opacity = 0.8)
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+URL <- paste0(
+        "https://cdn.rawgit.com/christophergandrud/networkD3/",
+        "master/JSONdata//flare.json")
+
+## Convert to list format
+Flare <- jsonlite::fromJSON(URL, simplifyDataFrame = FALSE)
+
+# Use subset of data for more readable diagram
+Flare$children = Flare$children[1:3]
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+radialNetwork(List = Flare, fontSize = 10, opacity = 0.9)
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+diagonalNetwork(List = Flare, fontSize = 10, opacity = 0.9)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+hc <- hclust(dist(USArrests), "ave")
+
+dendroNetwork(hc, height = 600)
+```

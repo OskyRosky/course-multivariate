@@ -1,0 +1,1847 @@
+---
+title: "Universidad de Costa Rica"
+subtitle: "Bancos Privados Costarricenses"
+author: "Fiorella Laurito Torres"
+output: 
+    html_document:
+      css: custom.css
+      code_folding: hide
+      toc: no
+      theme: flatly
+      highlight: tango
+
+---
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+# Pronósticos Carteras Crediticias {.tabset .tabset-fade .tabset-pills}
+
+## Introducción
+
+Entorno histórico del banco 
+
+![](intro.jpg)
+
+## Objetivo de Investigación
+
+> Pronosticar el comportamiento de la cartera crediticia del banco de Octubre 2018 a Diciembre 2019, para así obtener una perspectiva del otorgamiento de créditos a micro, pequeño y medianas empresas, posibles búsquedas de fondeo y rentabilidad financiera.  
+
+> Comparar con los bancos privados costarricenses, Lafise (Banco 2) y BCT (Banco 3), similares en téminos del negocio con Banco Improsa.
+
+## Metodología
+
+Para cada uno de los bancos
+
+![](meto.jpg)
+
+
+## Resultados
+
+
+```{r,message=FALSE,warning=FALSE,include=FALSE}
+setwd("~/Crecimiento Economico/Tarea 1 Series/Red")
+
+library(readxl)
+library(tseries)
+library(timeSeries)
+library(forecast)
+library(TTR)
+library(lubridate)
+library(plotly)
+library(plyr)
+library(ggthemes)
+library(gridExtra)
+library(scales)
+library(ggplot2)
+library(plotly)
+library(tidyr)
+library(dplyr)
+library(smooth)
+library(astsa)
+library(fpp)
+library(fpp2)
+library(VGAMdata)
+library(ggseas)
+library(dygraphs)
+library(knitr)
+library(kableExtra)
+library(highcharter)
+library(broom)
+```
+
+### Serie de la cartera crediticia{.tabset .tabset-fade .tabset-pills}
+
+#### Análisis Descriptivo
+
+```{r Datos2, echo=TRUE,fig.align='center'}
+datos <- read.csv("Serie_Cartera_Crediticia2.csv",sep = ";")
+
+datos$Mes<-as.Date(as.character(datos$Mes), format = "%d/%m/%Y")
+
+
+s.banco1 <- ts(datos$banco1, frequency=12, start=c(2010,1),end = c(2018,9))
+s.banco2 <- ts(datos$banco2, frequency=12, start=c(2010,1),end = c(2018,9))
+s.banco3 <- ts(datos$banco3, frequency=12, start=c(2010,1),end = c(2018,9))
+
+
+hchart(s.banco1,name = "Banco 1")%>% 
+  hc_add_series(name = "Banco 2",s.banco2, color="greenyellow")%>% 
+  hc_add_series(name = "Banco 3",s.banco3, color="cadetblue")%>%
+  hc_title(text = "Cartera Crediticia de Enero 2010 a Setiembre 2018 según banco <br> (Millones de colones) ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 800,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+#### Descomposición de la serie {.tabset .tabset-fade .tabset-pills}
+
+Bancos privados costarricenses:
+
+##### Banco 1
+
+```{r,message=FALSE,warning=FALSE,fig.align='center'}
+# Banco 1
+x <- stl(s.banco1,t.window=13, s.window="periodic", robust=TRUE)
+
+sea<-x$time.series[,1]
+tre<-x$time.series[,2]
+irreg<-x$time.series[,3]
+
+titulo<-hchart(s.banco1,color="white",showInLegend = FALSE)%>% 
+  hc_title(text = "Banco 1",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center") %>% hc_add_theme(hc_theme_null()) %>% 
+  hc_size(width = 500, height = 75)
+
+serie<-hchart(s.banco1,color="orange") %>% hc_yAxis(title= list(text = "Cartera"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+estac<-hchart(sea,color="deeppink") %>% hc_yAxis(title= list(text = "Estacionalidad"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+tend<-hchart(tre,color="darkturquoise") %>% hc_yAxis(title= list(text = "Tendencia"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+irregu<-hchart(irreg,color="greenyellow",type="column") %>% hc_yAxis(title= list(text = "Irregularidad"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+
+hw_grid(titulo,
+        serie,
+          estac,
+          tend,
+          irregu, ncol = 1)
+
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+
+##### Banco 2
+
+```{r,message=FALSE,warning=FALSE,fig.align='center'}
+# Banco 2
+x <- stl(s.banco2,t.window=13, s.window="periodic", robust=TRUE)
+
+sea<-x$time.series[,1]
+tre<-x$time.series[,2]
+irreg<-x$time.series[,3]
+
+titulo<-hchart(s.banco1,color="white",showInLegend = FALSE)%>% 
+  hc_title(text = "Banco 2",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center") %>% hc_add_theme(hc_theme_null()) %>% 
+  hc_size(width = 500, height = 75)
+
+serie<-hchart(s.banco1,color="orange") %>% hc_yAxis(title= list(text = "Cartera"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+estac<-hchart(sea,color="deeppink") %>% hc_yAxis(title= list(text = "Estacionalidad"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+tend<-hchart(tre,color="darkturquoise") %>% hc_yAxis(title= list(text = "Tendencia"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+irregu<-hchart(irreg,color="greenyellow",type="column") %>% hc_yAxis(title= list(text = "Irregularidad"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+
+hw_grid(titulo,
+        serie,
+          estac,
+          tend,
+          irregu, ncol = 1)
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+##### Banco 3
+
+```{r,message=FALSE,warning=FALSE,fig.align='center'}
+# Banco 3
+x <- stl(s.banco3,t.window=13, s.window="periodic", robust=TRUE)
+
+sea<-x$time.series[,1]
+tre<-x$time.series[,2]
+irreg<-x$time.series[,3]
+
+titulo<-hchart(s.banco1,color="white",showInLegend = FALSE)%>% 
+  hc_title(text = "Banco 3",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center") %>% hc_add_theme(hc_theme_null()) %>% 
+  hc_size(width = 500, height = 75)
+
+serie<-hchart(s.banco1,color="orange") %>% hc_yAxis(title= list(text = "Cartera"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+estac<-hchart(sea,color="deeppink") %>% hc_yAxis(title= list(text = "Estacionalidad"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+tend<-hchart(tre,color="darkturquoise") %>% hc_yAxis(title= list(text = "Tendencia"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+irregu<-hchart(irreg,color="greenyellow",type="column") %>% hc_yAxis(title= list(text = "Irregularidad"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 500, height = 175)
+
+hw_grid(titulo,
+        serie,
+          estac,
+          tend,
+          irregu, ncol = 1)
+
+
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+
+#### Regresión Lineal {.tabset .tabset-fade .tabset-pills}
+
+Bancos privados costarricenses:
+
+##### Banco 1 
+
+```{r,fig.align='center',comment="", warning=FALSE, message=FALSE,echo=FALSE}
+fuente<-"Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018"
+periodicidad <- 12
+entrenamiento2 <- c(2010,1)
+validacion2 <- c(2017,01)
+
+train.s.banco1 <-datos[1:84,]
+test.s.banco1 <- datos[85:105,]
+
+ts.train.s.banco1 <- ts(train.s.banco1[,2], start = entrenamiento2, frequency = periodicidad)
+ts.test.s.banco1  <- ts(test.s.banco1[,2], start =validacion2 , frequency = periodicidad)
+
+mod1.1  <- tslm(ts.train.s.banco1 ~ trend+season)
+
+modelo<-data.frame(summary(mod1.1)$coefficients)
+names(modelo)<-c("Estimado","Error Estándar","Valor T","Pr(>|t|)")
+
+modelo$Estimado<-round(modelo$Estimado,3)
+modelo$`Error Estándar`<-round(modelo$`Error Estándar`,3)
+modelo$`Valor T`<-round(modelo$`Valor T`,3)
+modelo$`Pr(>|t|)`<-round(modelo$`Pr(>|t|)`,3)
+
+makeTransparent<-function(someColor, alpha=100)
+{
+  newColor<-someColor + alpha #I wish
+  return(newColor)
+}
+
+transparente<-makeTransparent(2)
+
+modelo$`Pr(>|t|)`<-format(modelo$`Pr(>|t|)`, digits = 3)
+
+modelo %>%
+  mutate(
+    `Parámetro`=row.names(.),
+    `Pr(>|t|)` = cell_spec(`Pr(>|t|)`, color = "grey", 
+                             background = ifelse(`Pr(>|t|)` < 0.05, "greenyellow", transparente),
+                             align = "right")) %>% 
+  select(`Parámetro`,everything()) %>% 
+kable(escape = F,"html", align = c('l','r'), background = "white")%>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15)%>%
+  add_header_above(c("Resultados del modelo "= 5)) %>%
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+
+
+hchart(ts.train.s.banco1,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod1.1), color="greenyellow")%>% 
+  hc_title(text = "Banco 1 <br> Cartera Creditica y estimación por modelo regresión de Enero 2010 a Agosto 2017 ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+
+
+
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+##### Banco 2
+
+```{r,fig.align='center',comment="", warning=FALSE, message=FALSE,echo=FALSE}
+
+ts.train.s.banco2 <- ts(train.s.banco1[,8], start = entrenamiento2, frequency = periodicidad)
+ts.test.s.banco2  <- ts(test.s.banco1[,8], start =validacion2 , frequency = periodicidad)
+
+mod1.2  <- tslm(ts.train.s.banco2 ~ trend+season)
+
+modelo<-data.frame(summary(mod1.2)$coefficients)
+names(modelo)<-c("Estimado","Error Estándar","Valor T","Pr(>|t|)")
+
+modelo$Estimado<-round(modelo$Estimado,3)
+modelo$`Error Estándar`<-round(modelo$`Error Estándar`,3)
+modelo$`Valor T`<-round(modelo$`Valor T`,3)
+modelo$`Pr(>|t|)`<-round(modelo$`Pr(>|t|)`,3)
+
+makeTransparent<-function(someColor, alpha=100)
+{
+  newColor<-someColor + alpha #I wish
+  return(newColor)
+}
+
+transparente<-makeTransparent(2)
+
+modelo$`Pr(>|t|)`<-format(modelo$`Pr(>|t|)`, digits = 3)
+
+modelo %>%
+  mutate(
+    `Parámetro`=row.names(.),
+    `Pr(>|t|)` = cell_spec(`Pr(>|t|)`, color = "grey", 
+                             background = ifelse(`Pr(>|t|)` < 0.05, "greenyellow", transparente),
+                             align = "right")) %>% 
+  select(`Parámetro`,everything()) %>% 
+kable(escape = F,"html", align = c('l','r'), background = "white")%>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15)%>%
+  add_header_above(c("Resultados del modelo "= 5)) %>%
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+
+
+hchart(ts.train.s.banco2,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod1.2), color="greenyellow")%>% 
+  hc_title(text = "Banco 2 <br> Cartera Creditica y estimación por modelo regresión de Enero 2010 a Agosto 2017 ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+
+
+
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+##### Banco 2
+
+```{r,fig.align='center',comment="", warning=FALSE, message=FALSE,echo=FALSE}
+
+ts.train.s.banco3 <- ts(train.s.banco1[,9], start = entrenamiento2, frequency = periodicidad)
+ts.test.s.banco3  <- ts(test.s.banco1[,9], start =validacion2 , frequency = periodicidad)
+
+mod1.3  <- tslm(ts.train.s.banco3 ~ trend+season)
+
+modelo<-data.frame(summary(mod1.3)$coefficients)
+names(modelo)<-c("Estimado","Error Estándar","Valor T","Pr(>|t|)")
+
+modelo$Estimado<-round(modelo$Estimado,3)
+modelo$`Error Estándar`<-round(modelo$`Error Estándar`,3)
+modelo$`Valor T`<-round(modelo$`Valor T`,3)
+modelo$`Pr(>|t|)`<-round(modelo$`Pr(>|t|)`,3)
+
+makeTransparent<-function(someColor, alpha=100)
+{
+  newColor<-someColor + alpha #I wish
+  return(newColor)
+}
+
+transparente<-makeTransparent(2)
+
+modelo$`Pr(>|t|)`<-format(modelo$`Pr(>|t|)`, digits = 3)
+
+modelo %>%
+  mutate(
+    `Parámetro`=row.names(.),
+    `Pr(>|t|)` = cell_spec(`Pr(>|t|)`, color = "grey", 
+                             background = ifelse(`Pr(>|t|)` < 0.05, "greenyellow", transparente),
+                             align = "right")) %>% 
+  select(`Parámetro`,everything()) %>% 
+kable(escape = F,"html", align = c('l','r'), background = "white")%>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15)%>%
+  add_header_above(c("Resultados del modelo "= 5)) %>%
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+
+
+hchart(ts.train.s.banco3,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod1.3), color="greenyellow")%>% 
+  hc_title(text = "Banco 3 <br> Cartera Creditica y estimación por modelo regresión de Enero 2010 a Agosto 2017 ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+
+
+
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+
+
+#### Suavizamiento Exponencial{.tabset .tabset-fade .tabset-pills}
+
+Bancos privados costarricenses:
+
+##### Banco 1 
+
+```{r,comment="",fig.align='center'}
+mod2.1 <- ets(ts.train.s.banco1,  model ="MAA")
+summary(mod2.1)
+
+hchart(ts.train.s.banco1,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod2.1), color="greenyellow")%>% 
+  hc_title(text = "Banco 1 <br> Cartera Crediticia y estimación por modelo Suavizamiento \n Exponencial (M,A,A) de  Enero 2010 a Agosto 2017 ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+```
+Elaboración con datos de Superintendencia General de Entidades Financieras (SUGEF) 2010 a 2018
+
+##### Banco 2 
+
+```{r,comment="",fig.align='center'}
+
+pos.mod <- c("ANN", "ANA", "AAN", "AAA", "AAN", "AAA", "MNN", "MNA", "MNM", "MAN",
+             "MAA", "MAM", "MAN", "MAA", "MAM")
+
+# Hacemos todos los modelos ets
+
+m <- data.frame(matrix(0, ncol = 3, nrow = length(pos.mod)))
+colnames(m) <- c("AIC", "AICc", "BIC")
+
+for(i in 1:length(pos.mod)) {
+  d <- F
+  if(match(pos.mod[i], pos.mod) != i) {
+    d <- T
+  }
+  mod <- ets(ts.train.s.banco2, model = pos.mod[i], damped = d)
+  m[i, 1] <- mod$aic
+  m[i, 2] <- mod$aicc
+  m[i, 3] <- mod$bic
+  assign(paste("mod", i, sep = ""), mod)
+  rm(mod)
+}
+m <- cbind(pos.mod,m)
+
+
+mod2.2 <- ets(ts.train.s.banco2,  model ="MAA")
+summary(mod2.2)
+
+hchart(ts.train.s.banco2,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod2.2), color="greenyellow")%>% 
+  hc_title(text = "Banco 2 <br> Cartera Crediticia y estimación por modelo Suavizamiento \n Exponencial (M,A,A) de  Enero 2010 a Agosto 2017 ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+```
+
+##### Banco 3 
+
+```{r,comment="",fig.align='center'}
+m <- data.frame(matrix(0, ncol = 3, nrow = length(pos.mod)))
+colnames(m) <- c("AIC", "AICc", "BIC")
+
+for(i in 1:length(pos.mod)) {
+  d <- F
+  if(match(pos.mod[i], pos.mod) != i) {
+    d <- T
+  }
+  mod <- ets(ts.train.s.banco3, model = pos.mod[i], damped = d)
+  m[i, 1] <- mod$aic
+  m[i, 2] <- mod$aicc
+  m[i, 3] <- mod$bic
+  assign(paste("mod", i, sep = ""), mod)
+  rm(mod)
+}
+m <- cbind(pos.mod,m)
+
+
+mod2.3 <- ets(ts.train.s.banco3,  model ="MAA")
+summary(mod2.3)
+
+hchart(ts.train.s.banco3,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod2.3), color="greenyellow")%>% 
+  hc_title(text = "Banco 3 <br> Cartera Crediticia y estimación por modelo Suavizamiento \n Exponencial (M,A,A) de  Enero 2010 a Agosto 2017 ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+```
+
+
+#### ARIMA intervención {.tabset .tabset-fade .tabset-pills}
+
+Agregaron las variables:
+
+1. Variables Calendario 
+  * **Lunes**
+  * **Martes**
+  * **Miércoles**
+  * **Jueves**
+  * **Viernes**
+  * **Sábado**
+  * **Domingo**
+2. Días de Comercio (días del mes sin feriados y fines de semana)
+
+
+```{r,include=FALSE}
+#cantidad de lunes, martes... domingo
+
+startDate <- dmy("01-Jan-2010")
+endDate <- dmy("30-Sep-2018")
+
+fechas <-seq(from = startDate, to = endDate, by = "days")
+n_dia<-wday(fechas, label = TRUE, abbr = FALSE)
+mes<-format(fechas,format= "%Y-%m")
+
+meses.info<-data.frame(fechas,mes,n_dia)
+
+MESES<-meses.info %>% 
+  group_by(mes) %>% 
+  summarise( Lunes= length( which(n_dia=="lunes") ),
+             Martes= length( which(n_dia=="martes") ),
+             Miercoles= length( which(n_dia=="miércoles") ),
+             Jueves= length( which(n_dia=="jueves") ),
+             Viernes= length( which(n_dia=="viernes") ),
+             Sabado= length( which(n_dia=="sábado") ),
+             Domingo= length( which(n_dia=="domingo") ))
+  
+datos<-cbind(datos,MESES[,2:8])
+
+datos$dias_comercio<-
+  datos$Lunes+
+  datos$Martes+
+  datos$Miercoles+
+  datos$Jueves+
+  datos$Viernes-
+  datos$Can_feriados
+
+
+
+```
+
+Bancos privados costarricenses:
+
+##### Banco 1 
+
+
+```{r,include=FALSE}
+
+x<-data.frame(
+              lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+              #comercio=datos$dias_comercio
+              ) 
+
+mod3.1<-sarima(ts.train.s.banco1,p=1,d=1,q=0,S=12,D=1,P=0,Q=1,xreg = x[1:84,])
+cuadro2<-mod3.1$ttable
+
+mod3.1<-Arima(ts.train.s.banco1, order=c(1,1,0), seasonal=c(0,1,1),xreg = x[1:84,])
+
+res<-resid(mod3.1)
+
+c<-acf(res)
+
+
+```
+
+
+```{r,comment="", warning=FALSE, message=FALSE,echo=FALSE}
+
+modelo<-data.frame(cuadro2)
+names(modelo)<-c("Estimado","Error Estándar","Valor T","Pr(>|t|)")
+
+modelo$Estimado<-(modelo$Estimado)
+modelo$`Error Estándar`<-(modelo$`Error Estándar`)
+modelo$`Valor T`<-(modelo$`Valor T`)
+modelo$`Pr(>|t|)`<-(modelo$`Pr(>|t|)`)
+
+modelo$`Pr(>|t|)`<-format(modelo$`Pr(>|t|)`, digits = 3)
+
+modelo %>%
+  mutate(
+    `Parámetro`=row.names(.),
+    `Pr(>|t|)` = cell_spec(`Pr(>|t|)`, color = "grey", 
+                             background = ifelse(`Pr(>|t|)` < 0.05, "greenyellow", 
+                                                 ifelse(`Pr(>|t|)` < 0.07, "orange",
+                                                        transparente)),
+                             align = "right")) %>% 
+  select(`Parámetro`,everything()) %>% 
+  kable( escape = F,"html", align = c('l','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Resultados del modelo"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+```
+
+Diagnósticos de los residuos
+
+```{r,comment="",fig.align='center',warning=FALSE}
+
+res.esta<-hchart(res,name="Cartera",color="darkturquoise")  %>% 
+  hc_title(text = "Banco 1 <br> Diagnósticos de residuos del modelo ARIMA con variables de intervención",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Rediduos Estandarizados",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(height=300)%>% 
+  hc_legend(enabled = FALSE)
+
+acf.res<-hchart(c)%>% 
+  hc_yAxis(labels = list(format = "{value:.2f}"),min=-1, max=1)%>% 
+  hc_size(height = 250,width = 300) %>% 
+  hc_xAxis(min=2) %>% 
+  hc_title(text = "ACF Residuos",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold"))%>% 
+  hc_legend(enabled = FALSE)
+
+##QQPLOT
+
+probs <- c(0.25, 0.75)
+x1 <- qnorm(probs[1])
+x2 <- qnorm(probs[2])
+y1 <- quantile(res, probs[1])
+y2 <- quantile(res, probs[2])
+
+slope <- (y2-y1)/(x2-x1)  ## observed slope between quantiles
+int <- y1-slope*x1  ## intercept
+
+
+Y<-as.numeric(qqnorm(res,plot.it = F)$y)
+X<-as.numeric(qqnorm(res,plot.it = F)$x)
+valores.line<-int+slope*X
+ 
+#plot(X,Y);lines(X,valores.line,type="l")
+
+puntos<-data.frame(X,Y,valores.line)
+
+QQPLOT<-highchart() %>% 
+  hc_add_series_df(data = puntos,
+                   type = "scatter",
+                   x = X,
+                   y = Y)%>%
+  hc_add_series_df(data = puntos,
+                   type = "line",
+                   x = X,
+                   y = valores.line) %>% 
+  hc_title(text = "QQ Plot de normalidad de residuos estandarizados",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>% 
+  hc_yAxis(title = list(text = "Cuantiles"), min=-15000, max=15000) %>% 
+  hc_xAxis(title = list(text = "Cuantiles Teóricos"))  %>% 
+  hc_legend(enabled = FALSE) %>% 
+  hc_size(height = 250,width = 300)
+
+
+acf.qq<-hw_grid(acf.res,
+        QQPLOT, ncol = 2,rowheight = 250)
+
+
+#Ljung Box
+
+pvalues<-rep(0,36)
+for (i in 1:36){
+  pvalues[i]<-Box.test(res,type="Ljung",lag=i)$ p.value
+}
+
+pvalues<-pvalues[-1]
+
+pv.gf<-data.frame(pvalues,lags=c(2:36))
+
+LJUNG.BOX<-highchart() %>%
+  hc_add_series_df(data = pv.gf,
+                   type = "scatter",
+                   x = lags,
+                   y = pvalues) %>% 
+  hc_title(text = "P values estadístico Ljung Box",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>% 
+  hc_yAxis(title = list(text = "p value"),min=0,max=1,
+          plotBands  = list(
+             list(from = 0.048, to = 0.052, color = "darkblue"))) %>% 
+  hc_xAxis(title = list(text = "Rezago"))  %>% 
+  hc_legend(enabled = FALSE)%>% 
+  hc_size(height=210)
+
+
+
+
+res.esta
+acf.qq
+LJUNG.BOX
+
+
+```
+
+
+```{r,comment="",fig.align='center'}
+
+hchart(ts.train.s.banco1,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod3.1), color="greenyellow")%>% 
+  hc_title(text = "Banco 1 <br> Cartera Creditica y estimación por modelo ARIMA con intervención \n de  Enero 2010 a Diciembre 2014",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+```
+
+##### Banco 2 
+
+
+```{r,include=FALSE}
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+             )  
+
+mod3.2<-sarima(ts.train.s.banco2,p=1,d=1,q=1,S=12,D=1,P=1,Q=1,xreg = x[1:84,])
+cuadro2<-mod3.2$ttable
+
+mod3.2<-Arima(ts.train.s.banco2, order=c(1,1,1), seasonal=c(1,1,1),xreg = x[1:84,])
+
+res<-resid(mod3.2)
+
+c<-acf(res)
+
+
+```
+
+
+```{r,comment="", warning=FALSE, message=FALSE,echo=FALSE}
+
+modelo<-data.frame(cuadro2)
+names(modelo)<-c("Estimado","Error Estándar","Valor T","Pr(>|t|)")
+
+modelo$Estimado<-(modelo$Estimado)
+modelo$`Error Estándar`<-(modelo$`Error Estándar`)
+modelo$`Valor T`<-(modelo$`Valor T`)
+modelo$`Pr(>|t|)`<-(modelo$`Pr(>|t|)`)
+
+modelo$`Pr(>|t|)`<-format(modelo$`Pr(>|t|)`, digits = 3)
+
+modelo %>%
+  mutate(
+    `Parámetro`=row.names(.),
+    `Pr(>|t|)` = cell_spec(`Pr(>|t|)`, color = "grey", 
+                             background = ifelse(`Pr(>|t|)` < 0.05, "greenyellow", 
+                                                 ifelse(`Pr(>|t|)` < 0.07, "orange",
+                                                        transparente)),
+                             align = "right")) %>% 
+  select(`Parámetro`,everything()) %>% 
+  kable( escape = F,"html", align = c('l','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Resultados del modelo"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+```
+
+Diagnósticos de los residuos
+
+```{r,comment="",fig.align='center',warning=FALSE}
+
+res.esta<-hchart(res,name="Cartera",color="darkturquoise")  %>% 
+  hc_title(text = "Banco 2 <br> Diagnósticos de residuos del modelo ARIMA con variables de intervención",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Rediduos Estandarizados",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(height=300)%>% 
+  hc_legend(enabled = FALSE)
+
+acf.res<-hchart(c)%>% 
+  hc_yAxis(labels = list(format = "{value:.2f}"),min=-1, max=1)%>% 
+  hc_size(height = 250,width = 300) %>% 
+  hc_xAxis(min=2) %>% 
+  hc_title(text = "ACF Residuos",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold"))%>% 
+  hc_legend(enabled = FALSE)
+
+##QQPLOT
+
+probs <- c(0.25, 0.75)
+x1 <- qnorm(probs[1])
+x2 <- qnorm(probs[2])
+y1 <- quantile(res, probs[1])
+y2 <- quantile(res, probs[2])
+
+slope <- (y2-y1)/(x2-x1)  ## observed slope between quantiles
+int <- y1-slope*x1  ## intercept
+
+
+Y<-as.numeric(qqnorm(res,plot.it = F)$y)
+X<-as.numeric(qqnorm(res,plot.it = F)$x)
+valores.line<-int+slope*X
+ 
+#plot(X,Y);lines(X,valores.line,type="l")
+
+puntos<-data.frame(X,Y,valores.line)
+
+QQPLOT<-highchart() %>% 
+  hc_add_series_df(data = puntos,
+                   type = "scatter",
+                   x = X,
+                   y = Y)%>%
+  hc_add_series_df(data = puntos,
+                   type = "line",
+                   x = X,
+                   y = valores.line) %>% 
+  hc_title(text = "QQ Plot de normalidad de residuos estandarizados",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>% 
+  hc_yAxis(title = list(text = "Cuantiles"), min=-15000, max=15000) %>% 
+  hc_xAxis(title = list(text = "Cuantiles Teóricos"))  %>% 
+  hc_legend(enabled = FALSE) %>% 
+  hc_size(height = 250,width = 300)
+
+
+acf.qq<-hw_grid(acf.res,
+        QQPLOT, ncol = 2,rowheight = 250)
+
+
+#Ljung Box
+
+pvalues<-rep(0,36)
+for (i in 1:36){
+  pvalues[i]<-Box.test(res,type="Ljung",lag=i)$ p.value
+}
+
+pvalues<-pvalues[-1]
+
+pv.gf<-data.frame(pvalues,lags=c(2:36))
+
+LJUNG.BOX<-highchart() %>%
+  hc_add_series_df(data = pv.gf,
+                   type = "scatter",
+                   x = lags,
+                   y = pvalues) %>% 
+  hc_title(text = "P values estadístico Ljung Box",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>% 
+  hc_yAxis(title = list(text = "p value"),min=0,max=1,
+          plotBands  = list(
+             list(from = 0.048, to = 0.052, color = "darkblue"))) %>% 
+  hc_xAxis(title = list(text = "Rezago"))  %>% 
+  hc_legend(enabled = FALSE)%>% 
+  hc_size(height=210)
+
+
+
+
+res.esta
+acf.qq
+LJUNG.BOX
+
+
+```
+
+
+```{r,comment="",fig.align='center'}
+
+hchart(ts.train.s.banco2,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod3.2), color="greenyellow")%>% 
+  hc_title(text = "Banco 2 <br> Cartera Creditica y estimación por modelo ARIMA con intervención \n de  Enero 2010 a Diciembre 2014",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+```
+
+##### Banco 3 
+
+
+```{r,include=FALSE}
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+             ) 
+
+mod3.3<-sarima(ts.train.s.banco3,p=0,d=1,q=2,S=12,D=1,P=1,Q=1,xreg = x[1:84,])
+cuadro2<-mod3.3$ttable
+
+mod3.3<-Arima(ts.train.s.banco3, order=c(0,1,2), seasonal=c(1,1,1),xreg = x[1:84,])
+
+res<-resid(mod3.3)
+
+c<-acf(res)
+
+
+```
+
+
+```{r,comment="", warning=FALSE, message=FALSE,echo=FALSE}
+
+modelo<-data.frame(cuadro2)
+names(modelo)<-c("Estimado","Error Estándar","Valor T","Pr(>|t|)")
+
+modelo$Estimado<-(modelo$Estimado)
+modelo$`Error Estándar`<-(modelo$`Error Estándar`)
+modelo$`Valor T`<-(modelo$`Valor T`)
+modelo$`Pr(>|t|)`<-(modelo$`Pr(>|t|)`)
+
+modelo$`Pr(>|t|)`<-format(modelo$`Pr(>|t|)`, digits = 3)
+
+modelo %>%
+  mutate(
+    `Parámetro`=row.names(.),
+    `Pr(>|t|)` = cell_spec(`Pr(>|t|)`, color = "grey", 
+                             background = ifelse(`Pr(>|t|)` < 0.05, "greenyellow", 
+                                                 ifelse(`Pr(>|t|)` < 0.07, "orange",
+                                                        transparente)),
+                             align = "right")) %>% 
+  select(`Parámetro`,everything()) %>% 
+  kable( escape = F,"html", align = c('l','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Resultados del modelo"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+```
+
+Diagnósticos de los residuos
+
+```{r,comment="",fig.align='center',warning=FALSE}
+
+res.esta<-hchart(res,name="Cartera",color="darkturquoise")  %>% 
+  hc_title(text = "Banco 3 <br> Diagnósticos de residuos del modelo ARIMA ",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Rediduos Estandarizados",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(height=300)%>% 
+  hc_legend(enabled = FALSE)
+
+acf.res<-hchart(c)%>% 
+  hc_yAxis(labels = list(format = "{value:.2f}"),min=-1, max=1)%>% 
+  hc_size(height = 250,width = 300) %>% 
+  hc_xAxis(min=2) %>% 
+  hc_title(text = "ACF Residuos",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold"))%>% 
+  hc_legend(enabled = FALSE)
+
+##QQPLOT
+
+probs <- c(0.25, 0.75)
+x1 <- qnorm(probs[1])
+x2 <- qnorm(probs[2])
+y1 <- quantile(res, probs[1])
+y2 <- quantile(res, probs[2])
+
+slope <- (y2-y1)/(x2-x1)  ## observed slope between quantiles
+int <- y1-slope*x1  ## intercept
+
+
+Y<-as.numeric(qqnorm(res,plot.it = F)$y)
+X<-as.numeric(qqnorm(res,plot.it = F)$x)
+valores.line<-int+slope*X
+ 
+#plot(X,Y);lines(X,valores.line,type="l")
+
+puntos<-data.frame(X,Y,valores.line)
+
+QQPLOT<-highchart() %>% 
+  hc_add_series_df(data = puntos,
+                   type = "scatter",
+                   x = X,
+                   y = Y)%>%
+  hc_add_series_df(data = puntos,
+                   type = "line",
+                   x = X,
+                   y = valores.line) %>% 
+  hc_title(text = "QQ Plot de normalidad de residuos estandarizados",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>% 
+  hc_yAxis(title = list(text = "Cuantiles"), min=-15000, max=15000) %>% 
+  hc_xAxis(title = list(text = "Cuantiles Teóricos"))  %>% 
+  hc_legend(enabled = FALSE) %>% 
+  hc_size(height = 250,width = 300)
+
+
+acf.qq<-hw_grid(acf.res,
+        QQPLOT, ncol = 2,rowheight = 250)
+
+
+#Ljung Box
+
+pvalues<-rep(0,36)
+for (i in 1:36){
+  pvalues[i]<-Box.test(res,type="Ljung",lag=i)$ p.value
+}
+
+pvalues<-pvalues[-1]
+
+pv.gf<-data.frame(pvalues,lags=c(2:36))
+
+LJUNG.BOX<-highchart() %>%
+  hc_add_series_df(data = pv.gf,
+                   type = "scatter",
+                   x = lags,
+                   y = pvalues) %>% 
+  hc_title(text = "P values estadístico Ljung Box",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>% 
+  hc_yAxis(title = list(text = "p value"),min=0,max=1,
+          plotBands  = list(
+             list(from = 0.048, to = 0.052, color = "darkblue"))) %>% 
+  hc_xAxis(title = list(text = "Rezago"))  %>% 
+  hc_legend(enabled = FALSE)%>% 
+  hc_size(height=210)
+
+
+
+
+res.esta
+acf.qq
+LJUNG.BOX
+
+
+```
+
+
+```{r,comment="",fig.align='center'}
+
+hchart(ts.train.s.banco3,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod3.3), color="greenyellow")%>% 
+  hc_title(text = "Banco 3 <br> Cartera Creditica y estimación por modelo ARIMA con intervención \n de  Enero 2010 a Diciembre 2014",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width = 800,height=600)
+
+```
+
+
+#### Red Neuronal {.tabset .tabset-fade .tabset-pills}
+
+Bancos privados costarricenses:
+
+##### Banco 1 
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+devtools::source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+              #comercio=datos$dias_comercio#,
+              ) 
+ 
+```
+
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+(mod4.1 <- nnetar(ts.train.s.banco1, lambda=0,xreg=x[1:84,]))
+```
+
+
+Visualización de red neuronal
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+wts1<-mod4.1$model[[1]]$wts
+struct1<-mod4.1$model[[1]]$n
+
+plot.nnet(wts1,struct=struct1,pos.col='greenyellow',neg.col='grey',alpha.val=0.43,rel.rsc=5,circle.col='cadetblue',circle.cex=5,cex=1)
+```
+
+
+
+```{r}
+
+hchart(ts.train.s.banco1,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod4.1), color="greenyellow")%>% 
+  hc_title(text = "Banco 1 <br> Cartera Creditica y estimación por modelo a partir de redes neurnales \n de  Enero 2010 a Diciembre 2014",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width =800,height=600)
+
+
+```
+
+
+##### Banco 2 
+
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+              #comercio=datos$dias_comercio#,
+              ) 
+
+ 
+```
+
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+(mod4.2 <- nnetar(ts.train.s.banco2, lambda= BoxCox.lambda(ts.train.s.banco2),xreg=x[1:84,],size=2))
+```
+
+
+Visualización de red neuronal
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+wts1<-mod4.2$model[[1]]$wts
+struct1<-mod4.2$model[[1]]$n
+
+plot.nnet(wts1,struct=struct1,pos.col='greenyellow',neg.col='grey',alpha.val=0.43,rel.rsc=5,circle.col='cadetblue',circle.cex=5,cex=1)
+```
+
+
+
+```{r}
+
+hchart(ts.train.s.banco2,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod4.2), color="greenyellow")%>% 
+  hc_title(text = "Banco 2 <br> Cartera Creditica y estimación por modelo a partir de redes neurnales \n de  Enero 2010 a Diciembre 2014",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width =800,height=600)
+
+
+```
+
+
+##### Banco 3 
+
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+              #comercio=datos$dias_comercio#,
+              ) 
+
+(mod4.3 <- nnetar(ts.train.s.banco3, lambda= 0,xreg=x[1:84,]))
+```
+
+
+Visualización de red neuronal
+
+```{r, message=FALSE, comment="",warning=FALSE,fig.width=10}
+wts1<-mod4.3$model[[1]]$wts
+struct1<-mod4.3$model[[1]]$n
+
+plot.nnet(wts1,struct=struct1,pos.col='greenyellow',neg.col='grey',alpha.val=0.43,rel.rsc=5,circle.col='cadetblue',circle.cex=5,cex=1)
+```
+
+
+
+```{r}
+
+hchart(ts.train.s.banco3,name="Cartera",color="darkturquoise") %>% 
+  hc_add_series(name = "Estimación",fitted(mod4.3), color="greenyellow")%>% 
+  hc_title(text = "Banco 3 <br> Cartera Creditica y estimación por modelo a partir de redes neurnales \n de  Enero 2010 a Diciembre 2014",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}")) %>%
+      hc_chart(
+        zoomType = "xy"
+      )%>% 
+  hc_size(width =800,height=600)
+
+
+```
+
+#### Comparación de modelos  {.tabset .tabset-fade .tabset-pills}
+
+Bancos privados costarricenses:
+
+##### Banco 1 
+
+```{r,message=FALSE,warning=FALSE}
+Spline<-round(c(accuracy(mod1.1)[c(2,3,5)]),3)
+
+ETS.MAA<-round(c(accuracy(mod2.1)[c(2,3,5)]),3)
+
+ARIMA.INT<-round(c(accuracy(mod3.1)[c(2,3,5)]),3)
+
+RED<-round(c(accuracy(mod4.1)[c(2,3,5)]),3)
+
+cuadro<-cbind(Medida = c("RSME","MAE","MAPE"),
+           Spline,ETS.MAA,ARIMA.INT,RED)
+
+data.frame(cuadro)%>% 
+  kable( escape = F,"html", align = c('r','r','r','r','r','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Medidas de rendimiento de la \n parte de entrenamiento"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+
+
+
+```
+
+
+```{r, message=FALSE,warning=FALSE}
+
+p.5 <- forecast(mod1.1, h=21)
+
+Spline<-round(accuracy(p.5, ts.test.s.banco1)[2,c(2,3,5)],1)
+#--------------------------------------------------------------------#
+f.ETS.MAA<-forecast(mod2.1, h=21)
+
+ETS.MAA<-round(accuracy(f.ETS.MAA, ts.test.s.banco1)[2,c(2,3,5)],1)
+#--------------------------------------------------------------------#
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+              #comercio=datos$dias_comercio#,
+            ) 
+  
+
+f.arima.int<-forecast(mod3.1, h=21,xreg = x[85:105,])
+
+ARIMA.INT<-round(accuracy(f.arima.int, ts.test.s.banco1)[2,c(2,3,5)],1)
+
+#--------------------------------------------------------------------#
+
+f.mod4.1 <- forecast(mod4.1, h=21,xreg = x[85:105,])
+
+RED<-round(accuracy(f.mod4.1, ts.test.s.banco1)[2,c(2,3,5)],1)
+
+
+cuadro<-data.frame(Medida = c("RSME","MAE","MAPE"),
+           Spline,ETS.MAA,ARIMA.INT,RED)
+
+cuadro<-cuadro[,-1]
+
+data.frame(cuadro)%>% 
+  kable( escape = F,"html", align = c('r','r','r','r','r','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Medidas de rendimiento de la \n parte de validación"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+```
+
+
+##### Banco 2
+
+```{r,message=FALSE,warning=FALSE}
+Spline<-round(c(accuracy(mod1.2)[c(2,3,5)]),3)
+
+ETS.MAA<-round(c(accuracy(mod2.2)[c(2,3,5)]),3)
+
+ARIMA.INT<-round(c(accuracy(mod3.2)[c(2,3,5)]),3)
+
+RED<-round(c(accuracy(mod4.2)[c(2,3,5)]),3)
+
+cuadro<-cbind(Medida = c("RSME","MAE","MAPE"),
+           Spline,ETS.MAA,ARIMA.INT,RED)
+
+data.frame(cuadro)%>% 
+  kable( escape = F,"html", align = c('r','r','r','r','r','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Medidas de rendimiento de la \n parte de entrenamiento"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+
+
+
+```
+
+
+```{r, message=FALSE,warning=FALSE}
+
+p.5 <- forecast(mod1.2, h=21)
+
+Spline<-round(accuracy(p.5, ts.test.s.banco1)[2,c(2,3,5)],1)
+#--------------------------------------------------------------------#
+f.ETS.MAA<-forecast(mod2.2, h=21)
+
+ETS.MAA<-round(accuracy(f.ETS.MAA, ts.test.s.banco1)[2,c(2,3,5)],1)
+#--------------------------------------------------------------------#
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+              #comercio=datos$dias_comercio#,
+            ) 
+  
+
+f.arima.int<-forecast(mod3.2, h=21,xreg = x[85:105,])
+
+ARIMA.INT<-round(accuracy(f.arima.int, ts.test.s.banco1)[2,c(2,3,5)],1)
+
+#--------------------------------------------------------------------#
+
+f.mod4.2 <- forecast(mod4.2, h=21,xreg = x[85:105,])
+
+RED<-round(accuracy(f.mod4.2, ts.test.s.banco1)[2,c(2,3,5)],1)
+
+
+cuadro<-data.frame(Medida = c("RSME","MAE","MAPE"),
+           Spline,ETS.MAA,ARIMA.INT,RED)
+
+cuadro<-cuadro[,-1]
+
+data.frame(cuadro)%>% 
+  kable( escape = F,"html", align = c('r','r','r','r','r','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Medidas de rendimiento de la \n parte de validación"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+```
+
+
+##### Banco 3
+
+```{r,message=FALSE,warning=FALSE}
+Spline<-round(c(accuracy(mod1.3)[c(2,3,5)]),3)
+
+ETS.MAA<-round(c(accuracy(mod2.3)[c(2,3,5)]),3)
+
+ARIMA.INT<-round(c(accuracy(mod3.3)[c(2,3,5)]),3)
+
+RED<-round(c(accuracy(mod4.3)[c(2,3,5)]),3)
+
+cuadro<-cbind(Medida = c("RSME","MAE","MAPE"),
+           Spline,ETS.MAA,ARIMA.INT,RED)
+
+data.frame(cuadro)%>% 
+  kable( escape = F,"html", align = c('r','r','r','r','r','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Medidas de rendimiento de la \n parte de entrenamiento"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+
+
+
+```
+
+
+```{r, message=FALSE,warning=FALSE}
+
+p.5 <- forecast(mod1.3, h=21)
+
+Spline<-round(accuracy(p.5, ts.test.s.banco1)[2,c(2,3,5)],1)
+#--------------------------------------------------------------------#
+f.ETS.MAA<-forecast(mod2.3, h=21)
+
+ETS.MAA<-round(accuracy(f.ETS.MAA, ts.test.s.banco1)[2,c(2,3,5)],1)
+#--------------------------------------------------------------------#
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+              #comercio=datos$dias_comercio#,
+            ) 
+
+f.arima.int<-forecast(mod3.3, h=21,xreg = x[85:105,])
+
+ARIMA.INT<-round(accuracy(f.arima.int, ts.test.s.banco1)[2,c(2,3,5)],1)
+
+#--------------------------------------------------------------------#
+
+f.mod4.3 <- forecast(mod4.3, h=21,xreg = x[85:105,])
+
+RED<-round(accuracy(f.mod4.3, ts.test.s.banco1)[2,c(2,3,5)],1)
+
+
+cuadro<-data.frame(Medida = c("RSME","MAE","MAPE"),
+           Spline,ETS.MAA,ARIMA.INT,RED)
+
+cuadro<-cuadro[,-1]
+
+data.frame(cuadro)%>% 
+  kable( escape = F,"html", align = c('r','r','r','r','r','r'), background = "white") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, font_size = 15) %>%
+  column_spec(1, width = "3em", bold = T, color = "gray34") %>%
+  add_header_above(c("Medidas de rendimiento de la \n parte de validación"=5)) %>% 
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+```
+
+#### Pronósticos 2 mejores modelos {.tabset .tabset-fade .tabset-pills}
+
+**Criterios:**
+  1. Medidas de rendimiento
+  2. Comportamiento de pronóstico
+
+Bancos privados costarricenses:
+
+##### Banco 1 
+
+Pronóstico de la cartera crediticia de Banco 1 Setiembre 2018 a Octubre 2019
+
+```{r,fig.align='center',warning=FALSE}
+
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+             ) 
+
+mod.f1.1 <- Arima(s.banco1, order=c(1,1,0), seasonal=c(0,1,1), 
+                        xreg = x , 
+                        include.mean = TRUE)
+
+mod.f1.2 <- nnetar(s.banco1, lambda=0,xreg=x)
+
+startDate <- dmy("01-Oct-2018")
+endDate <- dmy("31-Dic-2019")
+
+fechas <-seq(from = startDate, to = endDate, by = "days")
+n_dia<-wday(fechas, label = TRUE, abbr = FALSE)
+mes<-format(fechas,format= "%Y-%m")
+
+meses.info.pronos<-data.frame(fechas,mes,n_dia)
+
+MESES.pronos<-meses.info.pronos %>% 
+  group_by(mes) %>% 
+  summarise( Lunes= length( which(n_dia=="lunes") ),
+             Martes= length( which(n_dia=="martes") ),
+             Miercoles= length( which(n_dia=="miércoles") ),
+             Jueves= length( which(n_dia=="jueves") ),
+             Viernes= length( which(n_dia=="viernes") ),
+             Sabado= length( which(n_dia=="sábado") ),
+             Domingo= length( which(n_dia=="domingo") ))
+
+#feriados.pronos<-c(1,0,1,1,0,0,1,1,1,1,2,1,1,0,1,1)
+
+x.new<-data.frame(lunes=MESES.pronos$Lunes,
+              martes=MESES.pronos$Martes,
+              miercoles=MESES.pronos$Miercoles,
+              jueves=MESES.pronos$Jueves,
+              viernes=MESES.pronos$Viernes,
+              sabado=MESES.pronos$Sabado,
+              domingo=MESES.pronos$Domingo
+              )
+
+
+x11 <- forecast(mod.f1.1, h = 15,xreg =  x.new, newxreg=x)
+x21 <- forecast(mod.f1.2, h=15,xreg =  x.new, PI=TRUE)
+
+
+X1<-hchart(x11)%>% 
+  hc_add_series(name = "Estimación",fitted(mod.f1.1), color="greenyellow")%>% 
+  hc_title(text = "ARIMA Intervención",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 400,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )%>% hc_yAxis(max = 360000,min=130000)
+
+X2<-hchart(x21)%>% 
+  hc_add_series(name = "Estimación",fitted(mod.f1.2), color="greenyellow")%>% 
+  hc_title(text = "Red Intervención (Modelo escogido)",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 400,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )%>% hc_yAxis(max = 360000,min=130000)
+
+hw_grid(X1,
+         X2, ncol = 2)
+
+```
+
+
+##### Banco 2
+
+Pronóstico de la cartera crediticia de Banco 2 Setiembre 2018 a Octubre 2019
+
+```{r,fig.align='center',warning=FALSE}
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+             ) 
+
+mod.f2.1 <- Arima(s.banco2, order=c(1,1,1), seasonal=c(1,1,1), 
+                        xreg = x , 
+                        include.mean = TRUE)
+
+mod.f2.2 <- ets(ts.train.s.banco2,  model ="MAA")
+
+
+feriados.pronos<-datos$Can_feriados[91:105]
+
+
+x12 <- forecast(mod.f2.1, h = 15,xreg =  x.new, newxreg=x)
+x22 <- forecast(mod.f2.2, h=15,xreg=x.new, PI = T)
+
+
+X1<-hchart(x12)%>% 
+  hc_add_series(name = "Estimación",fitted(mod.f2.1), color="greenyellow")%>% 
+  hc_title(text = "ARIMA Intervención (Modelo escogido)",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 400,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )%>% hc_yAxis(max = 300000,min=100000)
+
+X2<-hchart(x22)%>% 
+  hc_add_series(name = "Estimación",fitted(mod.f2.2), color="greenyellow")%>% 
+  hc_title(text = "Suavizamiento Exponencial",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 400,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )%>% hc_yAxis(max = 300000,min=100000)
+
+hw_grid(X1,
+         X2, ncol = 2)
+
+```
+
+
+
+##### Banco 3 
+
+Pronóstico de la cartera crediticia de Banco 3 Setiembre 2018 a Octubre 2019
+
+```{r,fig.align='center',warning=FALSE}
+x<-data.frame(lunes=datos$Lunes,
+              martes=datos$Martes,
+              miercoles=datos$Miercoles,
+              jueves=datos$Jueves,
+              viernes=datos$Viernes,
+              sabado=datos$Sabado,
+              domingo=datos$Domingo#,
+             ) 
+
+mod.f3.1 <-  Arima(s.banco3, order=c(0,1,2), seasonal=c(1,1,1),xreg =  x)
+
+mod.f3.2 <- nnetar(s.banco3, lambda=0,xreg=x)
+
+x13 <- forecast(mod.f3.1, h=15,xreg =  x.new, newxreg=x)
+x23 <- forecast(mod.f3.2, h = 15,xreg =  x.new,PI = T)
+
+
+X1<-hchart(x13)%>% 
+  hc_add_series(name = "Estimación",fitted(mod.f3.1), color="greenyellow")%>% 
+  hc_title(text = "ARIMA Intervención",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 400,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )%>% hc_yAxis(max = 400000,min=110000)
+
+X2<-hchart(x23)%>% 
+  hc_add_series(name = "Estimación",fitted(mod.f3.2), color="greenyellow")%>% 
+  hc_title(text = "Red Intervención (Modelo escogido)",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 400,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )%>% hc_yAxis(max = 400000,min=110000)
+
+hw_grid(X1,
+         X2, ncol = 2)
+
+```
+
+#### Pronósticos Finales
+
+```{r,fig.align='center',message=FALSE,warning=FALSE}
+
+hchart(s.banco1,name = "Banco 1")%>% 
+  hc_add_series(name = "Banco 2",s.banco2, color="greenyellow")%>% 
+  hc_add_series(name = "Banco 3",s.banco3, color="cadetblue")%>%
+  hc_add_series(name = "Pronóstico Banco 1",x21$mean, color="blue")%>% 
+  hc_add_series(name = "Pronóstico Banco 2",x12$mean, color="green")%>%
+  hc_add_series(name = "Pronóstico Banco 3",x23$mean, color="darkblue")%>%
+  hc_title(text = "Pronósticos de la cartera creditica según banco de  Enero 2007 a Junio 2020",
+           margin = 20, align = "center",
+           style = list(color = "#black", useHTML = TRUE, fontWeight = "bold")) %>%
+  hc_subtitle(text = "Millones de colones",
+              align = "center")%>% 
+  hc_yAxis(title = list(text = "Colones"),
+           labels = list(format = "{value}"))%>% 
+  hc_size(width = 800,height=600)%>% 
+  hc_tooltip(crosshairs = T,valueDecimals = 1)%>%
+  hc_chart(
+        zoomType = "xy"
+      )
+
+
+
+x21%>% 
+kable(format = "html" )%>%
+  kable_styling(bootstrap_options = "striped", full_width = F)%>%
+  add_header_above(c("Pronóstico de la cartera crediticia Banco 1 \n  Octubre 2018 a Diciembre 2019 "= 6)) %>%
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+x12%>% 
+kable(format = "html" )%>%
+  kable_styling(bootstrap_options = "striped", full_width = F)%>%
+  add_header_above(c("Pronóstico de la cartera crediticia Banco 2 \n  Octubre 2018 a Diciembre 2019 "= 6)) %>%
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+
+x23%>% 
+kable(format = "html" )%>%
+  kable_styling(bootstrap_options = "striped", full_width = F)%>%
+  add_header_above(c("Pronóstico de la cartera crediticia Banco 3 \n  Octubre 2018 a Diciembre 2019 "= 6)) %>%
+  footnote(general = fuente,
+           general_title = "Fuente: ", 
+           footnote_as_chunk = T)
+```
+
+## Conclusiones y Discusión
+
+* Modelo predictivo para cada uno de los bancos en particular
+
+* Se analiza el pronóstico del banco de interés y se toman las decisiones de planeación estratégica. 
+
+* Para los próximos meses, el monto en colones de las carteras no se espera que se intersequen, es decir el banco 3 seguirá siendo la institución financiera con mayor cartera y el banco 2 con menor volumen de cartera.
+
+* Para dos bancos mayor cartera es espera ligeros crecimientos con caídas en mayo 2019, mientras que para el banco con menor cartera se espera un crecimiento más pronunciado.
+
+* En fin, para los tres bancos se debe realizar una búsqueda de fondeo, dado los crecimientos. Además el entorno bancario actual se mantiene para los próximos años. Por lo que para los bancos 1 y 2 deben buscar nuevas estrategias para poder superar en cartera al banco 3.
+
+
+
+

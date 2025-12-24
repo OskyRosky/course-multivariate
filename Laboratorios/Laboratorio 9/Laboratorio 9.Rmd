@@ -1,0 +1,1239 @@
+---
+title: "Labo 9"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("tidytext",dependencies=TRUE)  
+library(gutenbergr)
+library(tidyverse)
+  library(tidytext)
+  library(tidytext)
+  library(tm)
+  library(lubridate)
+  library(zoo)
+  library(scales)
+  library(tm)
+  library(SnowballC)
+  library(wordcloud)
+  library(ggplot2)
+  library(dplyr)
+  library(readr)
+  library(cluster)
+  library(quanteda)
+  library(tm)
+  library(RColorBrewer)
+  library(ggplot2)
+  library(wordcloud)
+  library(biclust)
+  library(igraph)
+  library(fpc)
+  install.packages("Rcampdf", repos = "http://datacube.wu.ac.at/", type = "source")
+  
+  library(rvest)
+  library(httr)
+  library(xml2)
+  library(jsonlite)
+  library(tidyverse)
+  library(tidytext)
+  library(lubridate)
+  library(scales)
+  library(janeaustenr)
+  library(dplyr)
+  library(stringr)
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+# Text mining descriptivo {.tabset .tabset-fade .tabset-pills}
+
+EL presente laboratorio expone el análisis de agrupamieto (Cluster Analysis). Se presenta:  
+
+1. Paquetes y funciones
+2. Datos del laboratorio (fuentes de datos)
+3. Limpieza y la tokenización
+4. Análisis descriptivo del texto
+5. Nube de palabras
+6. Relaciones de palabras
+7. Análisis de sentimiento
+8. Otros análisis: clustering + relación de términos
+9. Web scraping
+
+
+## Sitios web de referencia y datos del laboratorio  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes al análisis de texto descriptivo: 
+
+https://www.tidytextmining.com/ 
+  https://rpubs.com/jboscomendoza/analisis_sentimientos_lexico_afinn  
+https://rpubs.com/jboscomendoza/mineria-de-textos-con-r  
+https://rpubs.com/jboscomendoza/coheed_and_cambria  
+https://rpubs.com/pjmurphy/265713 
+https://medium.com/@actsusanli/text-mining-is-fun-with-r-35e537b12002 
+ https://rpubs.com/Joaquin_AR/334526
+https://blogs.solidq.com/es/advanced-analytics/introduccion-al-text-mining-con-r-parte-i/  
+https://rpubs.com/cbpuschmann/textmining  
+https://rpubs.com/cruzcancel/238997 
+ https://rpubs.com/novrisuhermi/twitter_text_mining_2
+http://www.rpubs.com/peg/136839 
+ https://rpubs.com/HAVB/tangos
+
+## Datos del laboratorio  {.tabset .tabset-fade}
+
+Estos son los datos que se utilizarán en el laboratorio
+
+### Análisis de Gloriana
+
+Análisaremos a Gloriana, lo cual alguien describió como: 
+
+Gloriana, mujer joven y hermosa nacida en 1985 es una de las mejores, o tal vez la mejor medica general de nuestro pais. En sus estudios de maestria obtuvo la mejor calificacion de la generacion, y sus actos quedaron felicitados por sus profesores y compañeros. Ahora Gloriana debe seguir adelante demostrando su gran valentia, esfuerzo, pasión y dedicación para la medicina. Ella es Gloriana, o 
+tambien abrebiada como GMC.
+
+
+### Carta de Mujica
+
+Analizaremos un discurso pronunciado por José Mujica en la cumbre Río+20.
+Este archivo se llama es "mojicadis2.txt"
+
+### Análisis del libro Nible de  Miguel de Unamuno
+
+El texto con el que trabajeremos es el texto del libro Niebla de Miguel de Unamuno que se puede descargar en Gutenberg en el siguiente enlace:
+
+https://www.gutenberg.org/files/49836/49836-0.txt
+
+Nosotros utilizaremos el archivo "49836-0.txt"
+
+### Análisis de cantidatos a la presidencia en México
+
+Descargamos los datos con los tuits de los candidatos a la presidencia desde la siguiente dirección, estos han sido obtenidos usando la API de Twitter.
+
+https://raw.githubusercontent.com/jboscomendoza/rpubs/master/sentimientos_afinn/tuits_candidatos.csv
+
+### Análisis de un sitio web
+
+La información será el sitio MusicBrainz, un portal que compila metadatos musicales. Desde aquí podemos recuperar los metadatos de la discografía de Coheed and Cambria, es decir: la lista de canciones, el título del disco, y la fecha de publicación.
+
+https://musicbrainz.org/release/5e5dad52-a3cf-4cf7-a222-6f4bca6b17ef
+
+## Librerías del análisis de texto {.tabset .tabset-fade}
+
+Veamos las librerías más utilizadas por R para llevar a cabo el análisis de Text Mining.
+
+### stringr
+
+Paquete desarrollado por Hadley Wickham con multitud de funciones (división, búsqueda, reemplazo…) para trabajar con strings.
+
+https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html
+
+### tidytext
+
+Paquete desarrollado por Julia Silge y David Robinson. Los autores proponen una forma de trabajar con texto que sigue los principios de tidy data, lo que hace muy sencillo combinarlo con otros paquetes tales como dplyr, broom, tidyr y ggplot2.
+
+https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html
+
+### quanteda
+
+Paquete con multitud de funciones orientadas a text mining, algunas de ellas permiten crear Term-Document Matrices
+
+https://quanteda.io/
+https://cran.r-project.org/web/packages/quanteda/quanteda.pdf
+
+
+### purrr
+
+Permite aplicar funciones a elementos de un vector o lista, por ejemplo, a los elementos de una columna de un dataframe. 
+
+https://purrr.tidyverse.org/
+
+
+
+## Carga de Datos {.tabset .tabset-fade}
+
+### Análisis de Gloriana
+
+Sea la introducción del texto sobre Gloriana
+
+```{r}
+text <- c("Gloriana, mujer joven y hermosa nacida en 1985 es una de las-",
+          "mejores, o tal vez la mejor medica general de nuestro pais. En-",
+          "sus estudios de maestria obtuvo la mejor calificacion de la-",
+          "generacion, y sus actos quedaron felicitados por sus profesores y",
+          "compañeros. Ahora Gloriana debe seguir adelante demostrando su gran",
+          "valentia, esfuerzo, pasión y dedicación para la medicina.",
+          "Ella es Gloriana, o también abrebiada como GMC.")
+
+text
+```
+
+¿Será válido analizar lo dicho sobre Gloriana?
+
+### Carta de Mujica
+
+Analizaremos un discurso pronunciado por José Mujica en la cumbre Río+20.
+
+Utilizamos la función "readLines""
+
+```{r}
+setwd("C:/Users/oscar.centeno/Desktop/TM")
+
+mujica <- suppressWarnings(paste(readLines("mojicadis2.txt"), collapse=" "))
+
+text <- data.frame(doc_id = "Dis Mujica2", text = mujica)
+ds <- DataframeSource(text)
+```
+
+Finalmente, en archivo .txt, para su previo análisis debemos establecer el archivo como un Corpus
+
+```{r}
+corpus <- Corpus(ds)
+corpus 
+```
+
+Sin embargo nos hace falta limpiarlo....
+
+### Carta de Obama y de Trump
+
+```{r}
+obama <- suppressWarnings(paste(readLines("Discurso_obama.txt"), collapse=" "))
+trump <- suppressWarnings(paste(readLines("Discurso_trump.txt"), collapse=" "))
+
+text.obama <- data.frame(doc_id = "Dis obama", text = obama)
+ds.obama <- DataframeSource(text.obama)
+text.trump <- data.frame(doc_id = "Dis trump", text = trump)
+ds.trump <- DataframeSource(text.trump)
+
+```
+
+
+### Análisis del libro Nible de  Miguel de Unamuno
+
+Bajo el texo  Nible, archivo "49836-0.txt", realizamos el cargamiento del libro.
+
+```{r}
+setwd("C:/Users/oscar.centeno/Desktop/TM")
+
+nov_raw <- read_lines("49836-0.txt", skip = 419, n_max = 8313-419)
+```
+
+¿Cuál es el contenido de un texto .txt? Veamos
+
+```{r}
+str(nov_raw)
+```
+
+¿Qué podemos decir? 
+¿Cómo podemos acomodar el archivo para que sea un archivo analizable?
+
+Al analizar libros tan grandes y extensos, debemos acomodar un tanto el Corpus en párrafos:
+
+```{r}
+diez <- rep(1:ceiling(length(nov_raw)/10), each = 10)
+diez <- diez[1:length(nov_raw)]
+nov_text <- cbind(diez, nov_raw) %>% data.frame()
+nov_text <- aggregate(formula = nov_raw ~ diez,
+                      data = nov_text,
+                      FUN = paste,
+                      collapse = " ")
+nov_text <- nov_text %>% as.matrix
+
+# nov_text <- as.matrix(nov_text)
+
+dim(nov_text)
+```
+
+EL siguiente paso sería limpiar los datos....
+
+### Análisis de cantidatos a la presidencia en México
+
+A partir de una descarga de Tweets del siguiente enlace, descargaremos los datos y el Sentiment Lexicon.
+
+https://raw.githubusercontent.com/jboscomendoza/rpubs/master/sentimientos_afinn/tuits_candidatos.csv
+
+Primero se define un tema... 
+
+```{r}
+#Definir tema
+
+tema_graf <-
+  theme_minimal() +
+  theme(text = element_text(family = "serif"),
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(fill = "#EBEBEB", colour = NA),
+        legend.position = "none",
+        legend.box.background = element_rect(fill = "#EBEBEB", colour = NA))
+
+
+
+```
+
+Descargamos los datos 
+
+```{r}
+#Importar datos
+
+download.file("https://raw.githubusercontent.com/jboscomendoza/rpubs/master/sentimientos_afinn/tuits_candidatos.csv",
+              "tuits_candidatos.csv")
+
+tuits <- read.csv("tuits_candidatos.csv", stringsAsFactors = F, fileEncoding = "latin1") %>% 
+  tbl_df()
+
+
+```
+
+Descargamos el Sentimento Lexicon
+
+```{r}
+#Lexicoon 
+
+download.file("https://raw.githubusercontent.com/jboscomendoza/rpubs/master/sentimientos_afinn/lexico_afinn.en.es.csv",
+              "lexico_afinn.en.es.csv")
+
+afinn <- read.csv("lexico_afinn.en.es.csv", stringsAsFactors = F, fileEncoding = "latin1") %>% 
+  tbl_df()
+
+```
+
+Finalmente (fuera del contenido del curso), se preparan los tweets para el análisis
+
+```{r}
+#Preparando los datos
+
+tuits <- 
+  tuits %>%
+  separate(created_at, into = c("Fecha", "Hora"), sep = " ") %>%
+  separate(Fecha, into = c("Dia", "Mes", "Periodo"), sep = "/",
+           remove = FALSE) %>%
+  mutate(Fecha = dmy(Fecha),
+         Semana = week(Fecha) %>% as.factor(),
+         text = tolower(text)) %>%
+  filter(Periodo == 2018)
+
+#Convertir tuits en palabras
+
+tuits_afinn <- 
+  tuits %>%
+  unnest_tokens(input = "text", output = "Palabra") %>%
+  inner_join(afinn, ., by = "Palabra") %>%
+  mutate(Tipo = ifelse(Puntuacion > 0, "Positiva", "Negativa")) %>% 
+  rename("Candidato" = screen_name)
+
+
+# Obtenemos también una puntuación por tuit, usando group_by() y summarise() de dplyr,
+# y la agregamos tuits para usarla después. Tambien asignamos a los tuits sin puntuación
+# positiva o negativa un valor de 0, que indica neutralidad. Por último cambiamos el 
+#nombre de la columna screen_name a Candidato
+
+tuits <-
+  tuits_afinn %>%
+  group_by(status_id) %>%
+  summarise(Puntuacion_tuit = mean(Puntuacion)) %>%
+  left_join(tuits, ., by = "status_id") %>% 
+  mutate(Puntuacion_tuit = ifelse(is.na(Puntuacion_tuit), 0, Puntuacion_tuit)) %>% 
+  rename("Candidato" = screen_name)
+```
+
+### Análisis de un sitio web
+
+La información será el sitio MusicBrainz, un portal que compila metadatos musicales. Desde aquí podemos recuperar los metadatos de la discografía de Coheed and Cambria, es decir: la lista de canciones, el título del disco, y la fecha de publicación.
+
+Usamos la función read_html() de rvest, que lee el código html de una página web, a partir de su URL. Asignaremos al objeto musicbrainz_html el resultado de leer el código HTML de la página en la que se encuentran los metadatos del disco “The Afterman: Descencion”.
+
+```{r}
+musicbrainz_html <- read_html("https://musicbrainz.org/release/5e5dad52-a3cf-4cf7-a222-6f4bca6b17ef")
+```
+
+## Limpieza de datos y la tokenización  {.tabset .tabset-fade}
+
+Una vez cargados los datos, lo siguientes es limpiarlos, y luego hacerlos analizables (tokenizarlos). Dentro de la limpieza
+se podría proceder mediante funciones aisladas, o construir una función que todo lo haga.
+
+### Limpieza de datos : Funciones individuales
+
+
+Necesitamos limpiar el texto de caracteres que son de poca utilidad en la mineria de textos. Empezamos por aseguramos de que no queden caracteres especiales de la codificación, como saltos de línea y tabulaciones, con un poco de ayuda de Regular Expressions.
+
+
+```{r}
+nov_text = "Esto es 1 ejemplo de l'limpieza de6 TEXTO  https://t.co/rnHPgyhx4Z @JoaquinAmatRodrigo #textmining"
+```
+
+
+```{r}
+nov_text <- gsub("[[:cntrl:]]", " ", nov_text)
+```
+
+Convertimos todo a minúsculas.
+
+```{r}
+nov_text <- tolower(nov_text)
+```
+
+
+Usamos removeWords con stopwords("spanish") para eliminar palabras vacias, es decir, aquellas con poco valor para el análisis, tales como algunas preposiciones y muletillas.
+
+```{r}
+nov_text <- removeWords(nov_text, words = stopwords("spanish"))
+```
+
+
+Nos deshacemos de la puntuación, puesto que fin y fin. son identificadas como palabras diferentes, lo cual no deseamos.
+
+
+```{r}
+nov_text <- removePunctuation(nov_text)
+```
+
+En este caso, removemos los números, pues en Niebla no hay fechas y otras cantidades que deseemos conservar.
+
+```{r}
+nov_text <- removeNumbers(nov_text)
+```
+
+Por último eliminamos los espacios vacios excesivos, muchos de ellos introducidos por las transformaciones anteriores.
+
+```{r}
+nov_text <- stripWhitespace(nov_text)
+```
+
+Finalmente 
+
+```{r}
+nov_text
+```
+
+Y este texto ya limpio puede ser tokenizado
+
+### Función conjunta
+
+Tal vez es mejor hacer una función con todo lo anterior
+
+```{r}
+limpiar_tokenizar <- function(texto){
+  # El orden de la limpieza no es arbitrario
+    # Se convierte todo el texto a minúsculas
+    nuevo_texto <- tolower(texto)
+    # Eliminación de páginas web (palabras que empiezan por "http." seguidas 
+    # de cualquier cosa que no sea un espacio)
+    nuevo_texto <- str_replace_all(nuevo_texto,"http\\S*", "")
+    # Eliminación de signos de puntuación
+    nuevo_texto <- str_replace_all(nuevo_texto,"[[:punct:]]", " ")
+    # Eliminación de números
+    nuevo_texto <- str_replace_all(nuevo_texto,"[[:digit:]]", " ")
+    # Eliminación de espacios en blanco múltiples
+    nuevo_texto <- str_replace_all(nuevo_texto,"[\\s]+", " ")
+    # Tokenización por palabras individuales
+    nuevo_texto <- str_split(nuevo_texto, " ")[[1]]
+    # Eliminación de tokens con una longitud < 2
+    nuevo_texto <- keep(.x = nuevo_texto, .p = function(x){str_length(x) > 1})
+    return(nuevo_texto)
+}
+
+test = "Esto es 1 ejemplo de l'limpieza de6 TEXTO  https://t.co/rnHPgyhx4Z @JoaquinAmatRodrigo #textmining"
+limpiar_tokenizar(texto = test)
+```
+
+Y tenemos un texto limpio y toquenizado
+
+### La tokenización 
+
+Analicemos nuevamente el caso de Gloriana
+
+```{r}
+text <- c("Gloriana, mujer joven y hermosa nacida en 1985 es una de las-",
+          "mejores, o tal vez la mejor medica general de nuestro pais. En-",
+          "sus estudios de maestria obtuvo la mejor calificacion de la-",
+          "generacion, y sus actos quedaron felicitados por sus profesores y",
+          "compañeros. Ahora Gloriana debe seguir adelante demostrando su gran",
+          "valentia, esfuerzo, pasión y dedicación para la medicina.",
+          "Ella es Gloriana, o también abrebiada como GMC.")
+
+
+text
+```
+
+Ahora, queremos tokenizar. Utilizamos tibble para formar nuestro archivo, y con
+ unnest_tokens tokenizamos.
+
+```{r}
+text_df <- tibble(line = 1:7, text = text)
+
+
+conteo <- text_df %>% 
+  unnest_tokens(word, text)
+
+conteo
+
+```
+
+Y vemos que ya tokenizamos
+
+```{r}
+conteo %>%
+  count(word, sort = TRUE) 
+```
+
+### Limpieza de la carta de Mujica
+
+Si vemos la carta de Mujica en la cumbre de Rio, vemos que no está del todo analizable
+
+```{r}
+mujica <- suppressWarnings(paste(readLines("mojicadis2.txt"), collapse=" "))
+
+text <- data.frame(doc_id = "Dis Mujica2", text = mujica)
+text
+```
+
+Procedamos a limpiarla y generar la matriz de términos
+
+```{r}
+### Limpieza de texto
+corpus <- Corpus(ds)
+# Eliminar signos de puntuación
+corpus <- tm_map(corpus,removePunctuation)
+# Texto a minúsculas
+corpus <- tm_map(corpus,tolower)
+# Eliminar numeros
+corpus <- tm_map(corpus,removeNumbers)
+# Eliminar palabras vacías del idioma español
+corpus <- tm_map(corpus, removeWords, stopwords("spanish"))
+
+# Transformar el texto a texto plano
+corpus <- tm_map(corpus, PlainTextDocument)
+
+
+# Generando  la matriz de términos
+term_document_matrix <- TermDocumentMatrix(corpus)
+term_document_matrix <- as.matrix(term_document_matrix)
+terms.vector <- sort(rowSums(term_document_matrix), decreasing = TRUE)
+term_document_data_frame <- data.frame(word = names(terms.vector), freq = terms.vector)
+```
+
+```{r}
+term_document_data_frame
+```
+
+
+### Limpieza Cartas de Obama y de Trump
+
+```{r}
+### Limpieza de texto
+corpus.obama <- Corpus(ds.obama)
+corpus.trump <- Corpus(ds.trump)
+# Eliminar signos de puntuación
+corpus.obama <- tm_map(corpus.obama,removePunctuation)
+corpus.trump <- tm_map(corpus.trump,removePunctuation)
+# Texto a minúsculas
+corpus.obama <- tm_map(corpus.obama,tolower)
+corpus.trump <- tm_map(corpus.trump,tolower)
+# Eliminar numeros
+corpus.obama <- tm_map(corpus.obama,removeNumbers)
+corpus.trump <- tm_map(corpus.trump,removeNumbers)
+# Eliminar palabras vacías del idioma español
+corpus.obama <- tm_map(corpus.obama, removeWords, stopwords("spanish"))
+corpus.trump <- tm_map(corpus.trump, removeWords, stopwords("spanish"))
+
+# Transformar el texto a texto plano
+corpus.obama <- tm_map(corpus.obama, PlainTextDocument)
+corpus.trump <- tm_map(corpus.trump, PlainTextDocument)
+
+# Genera la matriz de términos
+term_document_matrix.obama <- TermDocumentMatrix(corpus.obama)
+term_document_matrix.obama <- as.matrix(term_document_matrix.obama)
+terms.vector.obama <- sort(rowSums(term_document_matrix.obama), decreasing = TRUE)
+term_document_data_frame.obama <- data.frame(word = names(terms.vector.obama), freq = terms.vector.obama)
+
+term_document_matrix.trump <- TermDocumentMatrix(corpus.trump)
+term_document_matrix.trump <- as.matrix(term_document_matrix.trump)
+terms.vector.trump <- sort(rowSums(term_document_matrix.trump), decreasing = TRUE)
+term_document_data_frame.trump <- data.frame(word = names(terms.vector.trump), freq = terms.vector.trump)
+```
+
+### Limpieza del libro Niebla de Miguel de Unamuno
+
+Necesitamos limpiar el texto de caracteres que son de poca utilidad en la mineria de textos.
+
+Empezamos por aseguramos de que no queden caracteres especiales de la codificación, como saltos de línea y tabulaciones, con un poco de ayuda de Regular Expressions.
+
+```{r}
+nov_text <- gsub("[[:cntrl:]]", " ", nov_text)
+nov_text <- removeNumbers(nov_text)
+nov_text <- stripWhitespace(nov_text)
+nov_text <- tolower(nov_text)
+nov_text <- removeWords(nov_text, words = stopwords("spanish"))
+nov_text <- removePunctuation(nov_text)
+```
+
+
+## Definición del corpus y  matriz de términos {.tabset .tabset-fade}
+
+Una vez se haya preparado el documentos (limpieza y tokenización), se procede a crear el Corpus, es decir, el acervo del documento a analizar.
+
+### Corpus del libro Niebla
+
+En nuestro caso, nuestro Corpus se compone de todos los parrafos del libro Niebla y los asignaremos al objeto nov_corpus usando las funciones VectorSource y Corpus.
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+
+setwd("C:/Users/oscar.centeno/Desktop/TM")
+
+nov_raw <- read_lines("49836-0.txt", skip = 419, n_max = 8313-419)
+
+str(nov_raw)
+str(nov_raw)
+
+diez <- rep(1:ceiling(length(nov_raw)/10), each = 10)
+diez <- diez[1:length(nov_raw)]
+nov_text <- cbind(diez, nov_raw) %>% data.frame()
+nov_text <- aggregate(formula = nov_raw ~ diez,
+                      data = nov_text,
+                      FUN = paste,
+                      collapse = " ")
+nov_text <- nov_text %>% as.matrix
+
+# nov_text <- as.matrix(nov_text)
+
+dim(nov_text)
+
+nov_text <- gsub("[[:cntrl:]]", " ", nov_text)
+nov_text <- removeNumbers(nov_text)
+nov_text <- stripWhitespace(nov_text)
+nov_text <- tolower(nov_text)
+nov_text <- removeWords(nov_text, words = stopwords("spanish"))
+nov_text <- removePunctuation(nov_text)
+
+```
+
+```{r}
+nov_corpus <- Corpus(VectorSource(nov_text))
+inspect(nov_corpus)
+```
+
+¿Qué podemos decir el Corpus?
+
+Como podemos ver, nustro Copus está compuesto por 790 documentos. 
+
+### Matriz de términos
+
+Una matriz de término de documento o matriz de documento de término es una matriz matemática que describe la frecuencia de los términos que aparecen en una colección de documentos. En una matriz de términos de documentos, las filas corresponden a los documentos de la colección y las columnas corresponden a los términos. Hay varios esquemas para determinar el valor que cada entrada en la matriz debe tomar. Uno de esos esquemas es tf-idf. Son útiles en el campo del procesamiento del lenguaje natural.
+
+Al final lo veo como una simple matriz pero con observaciones que son las variables y se contabiliza la frecuencia
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+filePath <- "http://www.sthda.com/sthda/RDoc/example-files/martin-luther-king-i-have-a-dream-speech.txt"
+text <- readLines(filePath)
+```
+
+Es posible, y muy probable, que esta venga luego de haber creado el Corpus
+
+```{r}
+
+docs <- Corpus(VectorSource(text))
+inspect(docs)
+```
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+#Transformación del texto
+
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "/")
+docs <- tm_map(docs, toSpace, "@")
+docs <- tm_map(docs, toSpace, "\\|")
+
+#Limpieza del texto
+
+
+# Convert the text to lower case
+docs <- tm_map(docs, content_transformer(tolower))
+# Remove numbers
+docs <- tm_map(docs, removeNumbers)
+# Remove english common stopwords
+docs <- tm_map(docs, removeWords, stopwords("english"))
+# Remove your own stop word
+# specify your stopwords as a character vector
+docs <- tm_map(docs, removeWords, c("blabla1", "blabla2")) 
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+# Text stemming
+# docs <- tm_map(docs, stemDocument)
+```
+
+Veamos como es la creación de la matriz de término, y lo que esta contiene
+
+```{r}
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+```
+
+Entonces, ¿cuál es la diferencia entre generar una matriz de términos y un Corpus?
+
+## Análisis exploratorio   {.tabset .tabset-fade}
+
+### Conteo de palabras
+
+El conteo de palabras es el análisis más básico, pero que sin duda podría revelar tendencias de cuáles son las
+palabras más utilizadas, y así entender el contexto. Por ejemplo si un texto solo habla de cosas de amor, sabemos
+que el autor quería expresar ese tipo de sentimentos, si son cuestiones de economía, sabemos por donde anda el asunto.
+
+Hagamos un recuento de palabras de lo escrito sobre Gloriana
+
+```{r}
+
+text <- c("Gloriana, mujer joven y hermosa nacida en 1985 es una de las-",
+          "mejores, o tal vez la mejor medica general de nuestro pais. En-",
+          "sus estudios de maestria obtuvo la mejor calificacion de la-",
+          "generacion, y sus actos quedaron felicitados por sus profesores y",
+          "compañeros. Ahora Gloriana debe seguir adelante demostrando su gran",
+          "valentia, esfuerzo, pasión y dedicación para la medicina.",
+          "Ella es Gloriana, o también abrebiada como GMC.")
+
+text
+
+text_df <- tibble(line = 1:7, text = text)
+
+text_df
+
+conteo <- text_df %>% 
+  unnest_tokens(word, text)
+
+conteo %>%
+  count(word, sort = TRUE) 
+
+
+
+```
+
+Sería mejor si lo ponemos en un gráfico
+
+```{r}
+conteo %>%
+  count(word, sort = TRUE) %>%
+ # filter(n > 600) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+```
+
+¿Podenos eliminar las palabras de una solo frecuencia?
+
+```{r}
+text2 <- removeWords(text, words = c("en", "vez", "por", "las", "gran", "actos", "1985" ))
+
+text2
+```
+
+Y sería volver a analizar el text2 con las palabras eliminadas...
+
+### Otra tipo de recuento de datos
+
+Ademas de analizar las palabras de forma individula, se podría analizar un tipo de palabra en específico, que haga refencia a una persona, o un grupo
+especial de personas. Por ejemplo, se podrían analizar Tweets sobre cierto candidato, y ver cuál promulagaba más campaña en las redes.
+
+```{r}
+tuits_afinn %>%
+  count(Candidato)
+
+# Únicas
+tuits_afinn %>% 
+  group_by(Candidato) %>% 
+  distinct(Palabra) %>% 
+  count()
+```
+
+Lo interesante es que a partir de 
+
+### Nube de Palabras estándar
+
+Una nube de palabra se ve como sigue. Estos datos se obtienen a partir del apartado de la creación de la matriz de término.
+
+```{r}
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+
+Casi siempre para crear una nube de palabra, se crea antes la matriz de término y luego la nube de palabra.
+
+http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know
+
+### Nube de Palabras: carta de mujica 
+
+Para el análisis del discurso de Mojica, veamos las palabras más relevantes
+
+```{r}
+wordcloud(term_document_data_frame$word, term_document_data_frame$freq,
+          scale = c(4,.2), min.freq = 3, max.words = 60, random.order = FALSE,
+          rot.per = .35, colors = brewer.pal(8,"Dark2"))
+```
+
+Según el discurso de Pepe, ¿cuáles fueron las palabras más relevantes?
+
+###Nube de Palabras: Cartas de Obama y de Trump
+
+Se podría ser más explícito y mejorar ciertos aspectos en las nubes de palabras. 
+
+
+```{r}
+wordcloud(term_document_data_frame.obama$word, term_document_data_frame.obama$freq,
+          scale = c(4,.2), min.freq = 3, max.words = 60, random.order = FALSE,
+          rot.per = .35, colors = brewer.pal(8,"Dark2"))
+```
+
+Las palabras que Obama pronunció más en su discurso son: mas, nación, unidos, mundo, hacer y hoy. Este habla de que los ciudadanos deben estar unidos en una sola nación que depende de la fe y la decisión del pueblo estadounidense
+
+
+```{r}
+wordcloud(term_document_data_frame.trump$word, term_document_data_frame.trump$freq,
+          scale = c(4,.2), min.freq = 3, max.words = 60, random.order = FALSE,
+          rot.per = .35, colors = brewer.pal(8,"Dark2"))
+```
+
+Las palabras que Trump mencionó más son: unidos, estadounidenses, pais, haremos, nacion, mundo, haremos. Trump dio un discurso bastante nacionalista y además hablando de varias cosas que haran como el gran país que son.
+
+###Nube de Palabras: nube de palabras en común
+
+```{r}
+text <- data.frame(doc_id = c("Obama", "Trump"), text = c(obama, trump))
+ds <- DataframeSource(text)
+corpus <- Corpus(ds)
+corpus
+
+# Eliminar signos de puntuación
+corpus <- tm_map(corpus,removePunctuation)
+# Texto a minúsculas
+corpus <- tm_map(corpus,tolower)
+# Eliminar numeros
+corpus <- tm_map(corpus,removeNumbers)
+# Eliminar palabras vacías del idioma español
+corpus <- tm_map(corpus, removeWords, stopwords("spanish"))
+# Genera la matriz de términos
+term_document_matrix <- TermDocumentMatrix(corpus)
+term_document_matrix <- as.matrix(term_document_matrix)
+colnames(term_document_matrix) <- c("Obama","Trump")
+```
+
+
+```{r}
+commonality.cloud(term_document_matrix,
+                  #comonality.measure = min, 
+                  max.words = 50)
+```
+
+Las palabras que más dijeron en común son: nación, unidos, pueblo, momento y tiempo.
+
+
+## Análisis de sentimiento  {.tabset .tabset-fade}
+
+### Palabras positivas y negativas 
+
+```{r}
+#  Palabras positivas y negativas más usadas por cada uno de ellos, usando map() 
+# de purr, top_n() de  dplyr() y ggplot.
+
+map(c("Positiva", "Negativa"), function(sentimiento) {
+  tuits_afinn %>%
+    filter(Tipo ==  sentimiento) %>%
+    group_by(Candidato) %>%
+    count(Palabra, sort = T) %>%
+    top_n(n = 10, wt = n) %>%
+    ggplot() +
+    aes(Palabra, n, fill = Candidato) +
+    geom_col() +
+    facet_wrap("Candidato", scales = "free") +
+    scale_y_continuous(expand = c(0, 0)) +
+    coord_flip() +
+    labs(title = sentimiento) +
+    tema_graf
+})
+```
+
+Se podría quitar la palabra NO, y ver los resultados (en el léxico, no podría confundir el análisis)
+
+```{r}
+tuits_afinn <-
+  tuits_afinn %>%
+  filter(Palabra != "no") 
+```
+
+¿Qué podríamos observar?
+
+
+### Tendencia de resultados
+
+Como deseamos observar tendencias, vamos a obtener la media de sentimientos por día,
+ usando group_by() y summarise() y asignamos los resultados a tuits_afinn_fecha
+
+```{r}
+tuits_afinn_fecha <-
+  tuits_afinn %>%
+  group_by(status_id) %>%
+  mutate(Suma = mean(Puntuacion)) %>%
+  group_by(Candidato, Fecha) %>%
+  summarise(Media = mean(Puntuacion))
+```
+
+
+
+Veamos nuestros resultados con ggplot()
+
+```{r}
+tuits_afinn_fecha %>%
+  ggplot() +
+  aes(Fecha, Media, color = Candidato) +
+  geom_line() +
+  tema_graf +
+  theme(legend.position = "top")
+
+```
+
+
+No nos dice mucho. Sin embargo, si separamos las líneas por candidato, usando 
+facet_wrap(), será más fácil observar el las tendencias de los Candidatos.
+
+```{r}
+tuits_afinn_fecha %>%
+  ggplot() +
+  aes(Fecha, Media, color = Candidato) +
+  geom_hline(yintercept = 0, alpha = .35) +
+  geom_line() +
+  facet_grid(Candidato~.) +
+  tema_graf +
+  theme(legend.position = "none")
+```
+
+
+### Comparando los sentimientos negativos y positivos
+
+Veamos si hacer una comparación entre lo bueno y lo malo
+
+```{r}
+tuits_afinn %>%
+  count(Candidato, Tipo) %>%
+  group_by(Candidato) %>%
+  mutate(Proporcion = n / sum(n)) %>%
+  ggplot() +
+  aes(Candidato, Proporcion, fill = Tipo) +
+  geom_col() +
+  scale_y_continuous(labels = percent_format()) +
+  tema_graf +
+  theme(legend.position = "top")
+
+```
+
+Otra forma...
+
+```{r}
+tuits_afinn %>%
+  group_by(Candidato, Fecha) %>%
+  count(Tipo) %>%
+  mutate(Proporcion = n / sum(n)) %>%
+  ggplot() +
+  aes(Fecha, Proporcion, fill = Tipo) +
+  geom_col(width = 1) +
+  facet_grid(Candidato~.) +
+  scale_y_continuous(labels = percent_format()) +
+  scale_x_date(expand = c(0, 0)) +
+  tema_graf +
+  theme(legend.position = "top")
+```
+
+
+### Bloxplots y densidades (diagrama caja y bigotes)
+
+```{r}
+tuits %>%
+  ggplot() +
+  aes(Candidato, Puntuacion_tuit, fill = Candidato) +
+  geom_boxplot() +
+  tema_graf
+```
+
+Veamos una versión del Bloxplots en el tiempo
+
+```{r}
+tuits %>%
+  mutate(Mes = factor(Mes)) %>% 
+  ggplot() +
+  aes(Mes, Puntuacion_tuit, fill = Candidato) +
+  geom_boxplot(width = 1) +
+  facet_wrap(~Candidato) +
+  tema_graf +
+  theme(legend.position = "none")
+```
+
+Veamos una Tendencia de sentimientos usando densidades
+
+```{r}
+tuits %>%
+  ggplot() +
+  aes(Puntuacion_tuit, color = Candidato) +
+  geom_density() +
+  facet_wrap(~Candidato) +
+  tema_graf
+
+tuits %>%
+  ggplot() +
+  aes(Puntuacion_tuit, color = Candidato) +
+  geom_density() +
+  facet_grid(Candidato~Mes) +
+  tema_graf
+```
+
+¿Qué podemos concluir?
+
+## Otros análisis  {.tabset .tabset-fade}
+
+### Clusterring en la descripción o exploración de las palabras
+
+Y pues si, acá también podemos agrupar palábras. Qué éxito!
+
+Este análisis permite así ver relaciones, o agrupación en las palabras. Veamos algunos ejemplos
+
+```{r error=FALSE ,message=FALSE, warning=FALSE, echo=FALSE}
+#Análisis de Corpus 
+
+nov_corpus <- Corpus(VectorSource(nov_text))
+nov_corpus
+
+# Term Document Matrix
+
+nov_tdm <- TermDocumentMatrix(nov_corpus)
+nov_tdm
+
+#Gráfica de frecuencias
+
+nov_mat <- as.matrix(nov_tdm)
+dim(nov_mat)
+
+nov_mat <- nov_mat %>% rowSums() %>% sort(decreasing = TRUE)
+nov_mat <- data.frame(palabra = names(nov_mat), frec = nov_mat)
+
+wordcloud(
+  words = nov_mat$palabra, 
+  freq = nov_mat$frec, 
+  max.words = 80, 
+  random.order = F, 
+  colors=brewer.pal(name = "Dark2", n = 8)
+)
+
+nov_mat[1:20, ]
+
+nov_mat[1:10, ] %>%
+  ggplot(aes(palabra, frec)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  geom_text(aes(hjust = 1.3, label = frec)) + 
+  coord_flip() + 
+  labs(title = "Diez palabras más frecuentes en Niebla",  x = "Palabras", y = "Número de usos")
+
+#Otra forma
+
+nov_mat %>%
+  mutate(perc = (frec/sum(frec))*100) %>%
+  .[1:10, ] %>%
+  ggplot(aes(palabra, perc)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  geom_text(aes(hjust = 1.3, label = round(perc, 2))) + 
+  coord_flip() +
+  labs(title = "Diez palabras más frecuentes en Niebla", x = "Palabras", y = "Porcentaje de uso")
+
+#Asociación de palabras
+
+findAssocs(nov_tdm, terms = c("augusto", "eugenia", "hombre", "mujer"), corlimit = .25)
+
+```
+
+Otra forma de analizar de forma descriptiva un Corpus o la matriz de términos, podría ser mediante la formación de cluster para
+saber posibles agrupación de lo que estamos analizando.
+
+Veamos el análisis del texto de Niebla de Miguel de Unamuno
+
+Realizaremos análisis de agrupaciones jerárquicas para identificar grupos de palabras relacionados entre sí, a partir de la distancia que existe entre ellos.
+
+Usaremos las función removeSparseItems para depurar nuestra matriz de términos de aquellas palabras que aparecen con muy poca frecuencia, es decir, son dispersos (“sparse”). Esta función requiere que especifiquemos el argumento sparse, que puede asumir valores de 0 a 1. Entre valor representa la dispersión de las palabras que queremos conservar. Si lo fijamos muy alto (cerca de 1, pero no 1), conservaremos muchas palabras, casi todas, pues estamos indicando que queremos conservar términos aunque sean muy dispersos. Naturalmente, lo opuesto ocurre si fijamos este valor muy bajo (cerca de 0, pero no 0), pudiendo incluso quedarnos con ningún término, si las palabras en nuestros documentos son dispersas en general. Qué valor fijemos depende del tipo de documento que tengamos, por lo que es aconsejable realizar ensayos hasta encontrar un equilibrio entre dispersión y número de términos. En este caso, he decidido fijarlo en .95 y guardaremos la nueva matriz de términos en el objeto nov_new
+
+```{r}
+nov_new <- removeSparseTerms(nov_tdm, sparse = .95)
+nov_tdm
+nov_new
+
+#De 7236 términos que teníamos, nos hemos quedado con 42, lo cual reduce en gran medida la dificultad y complejidad de los agrupamientos, lo cual es deseable. Es poco útil tener agrupaciones que son únicamente visualizaciones del texto original.
+#También podemos ver el número de términos pidiéndo el número de renglones de nuestra matriz de términos, que es igual al número de palabras que contiene.
+
+nov_new <- nov_new %>% as.matrix()
+```
+
+Necesitamos crear una matriz de distancias para empezar agrupar, lo cual requiere que los valores en las celdas sean estandarizados de alguna manera. Podríamos usar la función scale, pero realiza la estandarización usando la media de cada columna como referencia, mientras que nosotros necesitamos como referencia la media de cada renglón. Así que obtenemos una estandarización por renglones de manera manual.
+Comparamos cuántos términos teníamos originalmente y con cuántos nos hemos quedado, observando a cuánto equivale terms.
+
+```{r}
+nov_new <- nov_new %>% as.matrix()
+```
+
+Hecho esto, nuestra matriz ha sido estandarizada.Procedemos a obtener una matriz de distancia a partir de ella, con el método de distancias euclidianas y la asignamos al objeto nov_dist.
+
+```{r}
+nov_dist <- dist(nov_new, method = "euclidian")
+```
+
+Realizaremos nuestro agrupamiento jerárquico usando la función hclust, de la base de R. Este es en realidad un procedimiento muy sencillo una vez que hemos realizado la preparación. Usaremos el método de Ward (ward.D), que es el método por defecto de la función hclust y asignaremos sus resultados al objeto nov_hclust.
+
+```{r}
+nov_hclust <-  hclust(nov_dist, method = "ward.D")
+```
+
+Graficamos los resultados usando plot para generar un dendrograma.
+
+```{r}
+plot(nov_hclust, main = "Dendrograma de Niebla - hclust", sub = "", xlab = "")
+```
+
+De este modo podemos observar los grupos de palabras que existen en Niebla. Por ejemplo, “augusto” y “eugenia” forman un grupo, “puede” y “ser”, forman otro grupo (“puede ser” es una frase común en este libro). Además, podemos ver qué palabras pertenecen a grupos lejanos entre sí, por ejemplo, “quiero” y “verdad”.Podemos enfatizar los grupos de palabras trazando un rectángulo usando rect.hclust y con especificando cuántos grupos (k) deseamos resaltar.Crearemos el mismo gráfico pidiendo diez grupos.
+
+```{r}
+plot(nov_hclust, main = "Dendrograma de Niebla - hclust", sub = "", xlab = "")
+rect.hclust(nov_hclust, k = 10, border="blue")
+```
+
+El paquete cluster nos proporciona más métodos para realizar agrupamientos. Uno de ellos es agnes, que inicia asumiendo que cada elemento a agrupar por si mismo es un grupo y después crea grupos de grupos a partir de las distancias entre ellos, hasta que no es posible crear más grupos. Realizamos prácticamente el mismo procedimiento que con hclust, sólo cambiamos el método a average. Asignaremos nuestros resultados al objeto nov_agnes.
+
+```{r}
+nov_agnes <- agnes(nov_dist, method = "average")
+```
+
+Ahora graficamos nuestros resultados. Un agrupamiento creado con agnes genera dos gráficos, el primero muestra cómo se obtuvieron los grupos finales y el segundo es un dendrograma. Pediremos el segundo gráfico (which.plots = 2).
+
+```{r}
+plot(nov_agnes, which.plots = 2, main = "Dendrograma de Niebla - Agnes", sub = "", xlab = "")
+```
+
+Enfatizamos diez grupos.
+
+```{r}
+plot(nov_agnes, which.plots = 2, main = "Dendrograma de Niebla - Agnes", sub = "", xlab = "")
+rect.hclust(nov_agnes, k = 10, border = "blue")
+```
+
+Las agrupaciones que hemos obtenido usando hclust y agnes son diferentes entre sí. La decisión de qué método usemos depende de nuestros propósitos y de nuestra familiaridad con ellos.
+
+
+### Regresion LOESS
+
+A la hora de analizar las posibles tendencias de los sentimientos que utilizan puntajes, se podría aplicar un regresión LOESS para ver 
+por donde anda la puntuación media en el tiempo.
+
+```{r}
+tuits_afinn_fecha %>%
+  ggplot() +
+  aes(Fecha, Media, color = Candidato) +
+  geom_smooth(method = "loess", fill = NA) +
+  tema_graf
+```
+
+En realidad, podemos obtener líneas muy similares directamente de las puntuaciones.
+
+```{r}
+
+tuits_afinn %>%
+  ggplot() +
+  aes(Fecha, Puntuacion, color = Candidato) +
+  geom_smooth(method = "loess", fill = NA) +
+  tema_graf
+```
+
+Si separamos las lineas por candidato y mostramos los puntos a partir de los cuales
+se obtienen las líneas de regresión, podemos observar con más claridad la manera en
+que el algoritmo LOESS llega a sus resultado. Haremos esto con facet_wrap() y  geom_point.
+
+```{r}
+tuits_afinn %>%
+  ggplot() +
+  aes(Fecha, Puntuacion, color = Candidato) +
+  geom_point(color = "#E5E5E5") + 
+  geom_smooth(method = "loess", fill = NA) +
+  facet_wrap(~Candidato) +
+  tema_graf
+```
+
+### Media móvil
+
+Creo que una forma más acertada es utilizando medias móviles. Corrige el ruido y aporta una mejor interpretación. 
+
+```{r}
+tuits_afinn_fecha %>%
+  group_by(Candidato) %>%
+  mutate(MediaR = rollmean(Media, k = 3, align = "right", na.pad = TRUE)) %>%
+  ggplot() +
+  aes(Fecha, MediaR, color = Candidato) +
+  geom_hline(yintercept = 0, alpha = .35) +
+  geom_line() +
+  facet_grid(Candidato~.) +
+  tema_graf
+```
+
+
+## Web scraping  {.tabset .tabset-fade}
+
+### Sitio para hacer web scraping 
+
+Los siguientes sitios son excelentes guías para aprender sobre el Web Scrapping.
+
+https://www.datacamp.com/community/tutorials/r-web-scraping-rvest
+
+https://rpubs.com/jboscomendoza/coheed_and_cambria
+
+### Ejemplo de extracción de elementos
+
+¿Cómo extraemos los elemetos de un sito web? El siguiente ejemplo es excelente:
+
+https://www.analyticsvidhya.com/blog/2017/03/beginners-guide-on-web-scraping-in-r-using-rvest-with-hands-on-knowledge/
+
+### Elementos de un discos de música
+
+Usamos la función read_html() de rvest, que lee el código html de una página web, a partir de su URL. Asignaremos al objeto musicbrainz_html el resultado de leer el código HTML de la página en la que se encuentran los metadatos del disco “The Afterman: Descencion”.
+
+```{r}
+musicbrainz_html <- read_html("https://musicbrainz.org/release/5e5dad52-a3cf-4cf7-a222-6f4bca6b17ef")
+```
+
+### ¿Cómo extraemos los datos d Tweeter?
+
+El siguiente enlace lo explica, pero esperar que los de Tweeter les den los permisos, es a veces complicado....
+
+https://cran.r-project.org/web/packages/rtweet/vignettes/auth.html

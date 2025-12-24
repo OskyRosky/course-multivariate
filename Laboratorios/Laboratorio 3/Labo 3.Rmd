@@ -1,0 +1,651 @@
+---
+title: "Labo 3"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("FactoMineR")
+library("factoextra")
+#library("grid")
+library("REdaS")
+library("corpcor")
+library("GPArotation")
+library("psych")
+library("ggplot2")
+library("MASS")
+library("GGally")
+library("corrplot")
+library("Hmisc")
+library("psych")
+library("corrplot")
+library("nFactors")
+
+
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+
+# Análisis Factorial Exploratorio (EFA) {.tabset .tabset-fade .tabset-pills}
+
+EL presente laboratorio expone la técnica de PCA. Este mostrará:
+
+1. Funciones para realizar el FA
+2. El contenido del FA
+3. Pertinencia del FA
+4. La cantidad de factores
+5. Las rotaciones 
+6. Verificación del FA
+7. Introducción al FA confirmatorio
+
+
+## Sitios web de referencia  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes a la aplicación del FA exploratorio en R: 
+
+http://www.di.fc.ul.pt/~jpn/r/factoranalysis/factoranalysis.html
+
+https://quantdev.ssri.psu.edu/tutorials/intro-basic-exploratory-factor-analysis
+
+http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/116-mfa-multiple-factor-analysis-in-r-essentials/
+
+http://www.rpubs.com/marcelo-chavez/multivariado_1
+
+http://halweb.uc3m.es/esp/Personal/personas/jmmarin/esp/AMult/tema4am.pdf
+
+http://www.fuenterrebollo.com/Economicas/ECONOMETRIA/MULTIVARIANTE/FACTORIAL/analisis-factorial.pdf
+
+https://www.statmethods.net/advstats/factor.html
+
+https://www.r-bloggers.com/exploratory-factor-analysis-in-r/
+
+https://data.library.virginia.edu/getting-started-with-factor-analysis/
+
+https://rpubs.com/ranvirkumarsah/Intro2PCA_EFA
+
+
+## Datos del laboratorio {.tabset .tabset-fade}
+
+Para el siguiente ejemplo utilizaremos tanto los datos de "wine" y los de "personality"
+
+### Wine
+
+Es un archivo de datos con la valoración en la catación de un tipo de vino, según diversas características. 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+data(wine)
+colnames(wine)
+
+wine.1 <- wine[,-c(1,2)]
+colnames(wine.1)
+
+```
+
+La estructura del archivo wine:
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+str(wine.1)
+```
+
+### Personality
+
+corresponde a un estudio de 244 indivudios sobre una autoevaluaci?n de rasgos de personalidad como "distante", "hablador", "tranquilo", etc.  Se quiere reducir la 
+dimensión de los datos para llegar a explicar mejor las variables subyacentes de la prueba de  personalidad. 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+personality <- read.csv("personality0.txt", sep="")
+
+attach(personality)
+
+personality = as.data.frame(scale(personality))
+names(personality)
+
+```
+
+La estructura del archivo personality:
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+str(personality)
+```
+
+## Funciones y librerías del FA {.tabset .tabset-fade}
+
+Las funciones y librerías parar realizar el FA en R pueden ser:
+
+1. MFA() (FactoMineR)
+
+https://www.rdocumentation.org/packages/FactoMineR/versions/1.41/topics/MFA
+
+```{r}
+# MFA (base, group, type = rep("s",length(group)), excl = NULL, 
+#     ind.sup = NULL, ncp = 5, name.group = NULL,  
+#     num.group.sup = NULL, graph = TRUE, weight.col.mfa = NULL, 
+#     row.w = NULL, axes = c(1,2), tab.comp=NULL)
+```
+
+2. FA() (psych)
+
+https://www.rdocumentation.org/packages/psych/versions/1.8.12/topics/fa 
+
+```{r}
+# fa(r,nfactors=1,n.obs = NA,n.iter=1, rotate="oblimin", scores="regression", 
+# residuals=FALSE, SMC=TRUE, covar=FALSE,missing=FALSE,impute="median",
+# min.err = 0.001,  max.iter = 50,symmetric=TRUE, warnings=TRUE, fm="minres",
+#  alpha=.1,p=.05,oblique.scores=FALSE,np.obs=NULL,use="pairwise",cor="cor",
+#  correct=.5,weight=NULL,...)
+# fac(r,nfactors=1,n.obs = NA, rotate="oblimin", scores="tenBerge", residuals=FALSE,
+#  SMC=TRUE, covar=FALSE,missing=FALSE,impute="median",min.err = 0.001, 
+# max.iter=50,symmetric=TRUE,warnings=TRUE,fm="minres",alpha=.1,
+# oblique.scores=FALSE,np.obs=NULL,use="pairwise",cor="cor",correct=.5, weight=NULL,...)
+# 
+# fa.sapa(r,nfactors=1,n.obs = NA,n.iter=1,rotate="oblimin",scores="regression", 
+# residuals=FALSE,SMC=TRUE,covar=FALSE,missing=FALSE,impute="median", min.err = .001,
+# max.iter=50,symmetric=TRUE,warnings=TRUE,fm="minres",alpha=.1, p =.05, 
+# oblique.scores=FALSE,np.obs=NULL,use="pairwise",cor="cor",correct=.5,weight=NULL,
+# frac=.1,...)
+```
+
+
+3. factanal() ()
+
+https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/factanal
+
+```{r}
+# factanal(x, factors, data = NULL, covmat = NULL, n.obs = NA,
+#          subset, na.action, start = NULL,
+#          scores = c("none", "regression", "Bartlett"),
+#          rotation = "varimax", control = NULL, …)
+```
+
+
+Utilizaremos esencialmente las funciones MFA y factanal
+
+##  Pertinencia del FA {.tabset .tabset-fade}
+
+### Estadísticas descriptivas
+
+En el análisis de la reducción de variables, este análisis posee interés si algunas entre estas están correlacionadas, y por lo tanto se puede llegar
+a una fusión de las variables. Una forma de corroborar la correlación entre las variables es mediante el gráfico de correlaciones. Recordar que en el laboratorio
+vimos diversas modalidades de este gráfico. 
+
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+ res.mfa <- MFA(wine, 
+               group = c(2, 5, 3, 10, 9, 2), 
+               type = c("n", "s", "s", "s", "s", "s"),
+               name.group = c("origin","odor","visual",
+                              "odor.after.shaking", "taste","overall"),
+               num.group.sup = c(1, 6),
+               graph = FALSE)
+
+```
+
+Veamos dos ejemplos de gráficos de correlación:
+
+1.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+ggcorr(wine.1, method = c("everything", "pearson")) 
+
+```
+
+2.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+corrplot(cor(wine.1, use="complete.obs"), order = "original", tl.col='black', tl.cex=.75) 
+
+```
+
+Para el presente caso de wine, se observa que efectivamente las variables están correlacionadas entre ellas, y que por lo tanto se evidencia la pertinencia de llevar a cabo un 
+análisis de FA exploratorio.
+
+### Pruebas estadísticas
+
+También, se puede probar la pertinencia del análisis por FA mediante pruebas numéricas. Acá podemos recurrir a las pruebas de KMO y la Esferecidad de Bartlett
+
+#### KMO
+
+La prueba Kaiser Meyer Olkin (KMO) es una medida de la idoneidad de los datos para el análisis factorial. Esta estadística mide la proporción de la varianza total entre las variables, que puede ser una varianza común.
+
+KMO devuelve valores entre 0 y 1
+* Los valores entre 0,8 y 1 indican que el muestreo es adecuado.
+* Los valores entre 0,5 y 0,8 indican que el muestreo no es adecuado y que los datos deben corregirse antes de realizar la EPT.
+* Los valores por debajo de 0.5 indican que hay grandes correlaciones parciales, lo cual es un problema para el análisis factorial.
+
+En palabras de Kaiser:
+* 0.00 a 0.49 inaceptable
+* 0.50 a 0.59 miserable
+* 0.60 a 0.69 mediocre.
+* 0.70 a 0.79 mediano
+* 0.80 a 0.89 meritorio
+* 0.90 a 1.00 maravilloso
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Test KMO
+
+corr_wine <- cor(wine.1)
+KMO(corr_wine)
+
+```
+
+¿qué podemos concluir para el presente caso?
+
+#### Esferecidad de Bartlett
+
+La prueba de esfericidad de Bartlett contrasta la hipótesis nula de que la matriz de correlaciones es una matriz identidad, en cuyo caso no existirían correlaciones significativas entre las variables y el modelo factorial no sería pertinente.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+corr_wine <- cor(wine.1)
+
+cortest.bartlett(corr_wine)
+```
+
+Por lo tanto se corrobora la pertinencia de aplicar un PCA para los datos de wine.
+
+## Estimación del primero modelo por FA {.tabset .tabset-fade}
+
+Al inicio debemos estimar un FA sin rotación, y con un número relativamente grande de factores
+
+### Ejemplo de wine
+
+En este caso utilizamos la función fa
+
+```{r }
+# fa.0 <- fa(r=wine.1, nfactors = 10, rotate = "none")
+# print(fa.0)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fa.0 <- fa(r=wine.1, nfactors = 10, rotate = "none")
+print(fa.0)
+```
+
+Esto nos permite ver ciertas cosas, pero no es del todo fundamental.... Debemos
+verificar el número de factores que podría explicar el conjunto de datos.
+
+### Ejemplo de personality
+
+PAra el caso de personality, vemos el primer FA. Interesa sobre todo as funcionalidades que podemos sacar del análisis. 
+
+```{r }
+
+# res1b <- factanal(personality, factors = 10, rotation = "none", na.action = na.omit)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+res1b <- factanal(personality, factors = 10, rotation = "none", na.action = na.omit)
+#Las diversas funciones del análisis de factores:
+names(res1b)
+```
+
+Próximamente, veremos cómo podemos utilizar los elementos de las funciones.
+
+## Cantidad de Factores {.tabset .tabset-fade}
+
+### Gráfico de sedimentación (Scree plot)
+
+
+
+#### Opción 1
+
+La forma más popular de conocer la cantidad óptima de factores es mediante el gráfico de sedimentación. Lo usual es ver dónde es que se lleva a cabo la caída más
+importante, o se dibuja un "codo". A veces no es nada fácil el saber lo anterior. Personalmente considero que ante la poca claridad, hay que llevar a cabo un análisis
+interactivo del FA.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_screeplot(res.mfa)
+```
+
+¿Cuántos factores?
+
+#### Opción 2
+
+R posee ciertos criterios que permiten "guiar" al analista en la elección del número de factor a elegir.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+corpdat1 <- cor(wine.1, use="pairwise.complete.obs")
+
+fa.parallel(x=corpdat1, fm="minres", fa="fa")
+
+nScree(x=corpdat1,model="factors")
+plot(nScree(x=corpdat1,model="factors"))
+```
+
+Entonces, ¿cuántos componentes debemos elegir? 
+
+## Rotaciones {.tabset .tabset-fade}
+
+Con tal de mejorar la interpretación de los resultados, es que llevamos a cabo las rotaciones. Estas permiten identificar mejorar que variable
+pertenece a cierto componente, y por ende brindar una claridad a la estructura de la data.
+
+La lista de rotaciones posibles es enorme:
+
+-Varimax
+-Criterio Oblimin directo
+-Quartimax
+-Equamax
+-Promax
+-Etc...
+
+Veamos una lista más extensa de ciertas rotaciones para la función fa().
+
+Algunas rotaciones ortogonales
+
+```{r}
+
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "none")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "varimax")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "quartimax")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "bentlerT")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "equamax")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "varimin")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "geominT")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "bifactor")
+```
+
+Algunas rotaciones oblicuas
+
+```{r}
+
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "none")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "varimax")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "quartimax")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "bentlerT")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "equamax")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "varimin")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "geominT")
+# fa.1 <- fa(r=wine.1, nfactors = 5, rotate = "bifactor")
+```
+
+En nuestro caso de wine utilizaromos una rotación varimax
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+fa.1 <- fa(r=wine.1, nfactors = 3, rotate = "varimax")
+```
+
+También, para el caso de personality utilizaremos una rotación varimax
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+res1a <- factanal(personality, factors = 5, rotation = "varimax", na.action = na.omit)
+```
+
+
+## Resultados de los FA: general, cargas y las comunalidades {.tabset .tabset-fade}
+
+### General
+
+De forma general podemos ver diversos resultados del análisis del FA.
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+fa.0 <- fa(r=personality, nfactors = 5, rotate = "varimax")
+print(fa.0)
+```
+
+### Cargas y correlaciones 
+
+El análisis que mejorar identifica la estructura de los datos son las cargas factorias de las variables a los factores 
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+res1a <- factanal(personality, factors = 5, rotation = "varimax", na.action = na.omit)
+names(res1b)
+
+res1a$loadings
+
+```
+
+```{r error=FALSE ,message=FALSE, warning=FALSE}
+res1a <- factanal(personality, factors = 5, rotation = "varimax", na.action = na.omit)
+names(res1b)
+
+res1a$correlation
+
+```
+
+### Comunalidades y el uniquenesses
+
+En el análisis de FA, interesa conocer las comunalidades y otros. Se denomina "comunalidad" a la proporción de la varianza explicada por los factores comunes en una variable. El Análisis Factorial comienza sus cálculos a partir de lo que se conoce como matriz reducida compuesta por los coeficientes de correlación entre las variables y con las comunalidades en la diagonal.
+
+```{r error=FALSE ,message=FALSE, warning=FALSE} 
+res1a <- factanal(personality, factors = 5, rotation = "varimax", na.action = na.omit)
+names(res1a)
+
+res1a$uniquenesses
+
+# Calculadon la  singularidad  y la comunalidad
+
+loadings_distant = res1a$loadings[1,]
+communality_distant = sum(loadings_distant^2); communality_distant
+
+
+uniqueness_distant = 1-communality_distant; uniqueness_distant
+```
+
+
+## Verificación de resultados {.tabset .tabset-fade}
+
+### Contribuciones
+
+Veamos el peso de cada variable a los Factores
+
+Factor 1
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_contrib(res.mfa, choice = "quanti.var", axes = 1, top = 20,
+             palette = "jco")
+```
+
+Factor 2
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_contrib(res.mfa, choice = "quanti.var", axes = 2, top = 20,
+             palette = "jco")
+```
+
+Factor 3
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_contrib(res.mfa, choice = "quanti.var", axes = 3, top = 20,
+             palette = "jco")
+```
+
+### Reporte del FA
+
+Según la cantidad de factores, la función fa.diagram nos puede indicar cuál es la estructura factorial del análisis.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fa.1 <- fa(r=wine.1, nfactors = 3, rotate = "varimax")
+
+fa.diagram(fa.1)
+```
+
+
+### Factores en plano 2D
+
+LLevado a cabo el proceso de elegir la rotación y luego el número de componentes, podemos verificar que desde un inicio hasta la solución del problema, la estructura factorial 
+del FA posee una forma de explicar los facores en un plano 2D. Veamos esto
+
+Inicio: todas las variables
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+res1b <- factanal(personality, factors = 10, rotation = "none", na.action = na.omit)
+
+load = res1b$loadings[,1:2]
+plot(load, type="n") 
+text(load,labels=names(personality),cex=.7)
+```
+
+Intermedio: aplicación del FA y el acomodo de las variables
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+res1a <- factanal(personality, factors = 5, rotation = "varimax", na.action = na.omit)
+
+load <- res1a$loadings[,1:2]
+plot(load, type="n") # set up plot 
+text(load,labels=names(personality),cex=.7) # agregando el nombre de las variables
+
+```
+
+Final: estructura final del FA
+
+Creamos la estructura factorial mediante el análisis de las cargas factoriales
+
+```{r }
+shy = rowMeans(cbind(personality$distant, personality$shy, personality$withdrw, personality$quiet))
+outgoing = rowMeans(cbind(personality$talkatv, personality$outgoin, personality$sociabl))
+hardworking = rowMeans(cbind(personality$hardwrk, personality$persevr, personality$discipl))
+friendly = rowMeans(cbind(personality$friendl, personality$kind, personality$coopera, personality$agreebl, personality$approvn, personality$sociabl))
+anxious = rowMeans(cbind(personality$tense, personality$anxious, personality$worryin))
+
+# Combinando los factores y creando una nueva estructura de datos
+combined_data = cbind(shy,outgoing,hardworking,friendly,anxious)
+combined_data = as.data.frame(combined_data)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+res2 <- factanal(combined_data, factors = 2, na.action=na.omit)
+
+load <- res2$loadings[,1:2]
+plot(load, type="n") # set up plot 
+text(load,labels=names(combined_data),cex=.7) # agregando el nombre de las variables
+
+```
+
+Puede que acá se estimen diversos modelos de FA, con diversas rotaciones, con tal de ver una mejorar separación, y hasta aglomeración de los factores. 
+
+## Otros análisis {.tabset .tabset-fade}
+
+### Otros análisis de las variables: circulos de correlación
+
+#### Correlación entre variables cuanti y las dimensiones
+
+Flechas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_mfa_var(res.mfa, "quanti.var", palette = "jco", 
+             col.var.sup = "violet", repel = TRUE)
+
+```
+
+Puntos
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_mfa_var(res.mfa, "quanti.var", palette = "jco", 
+             col.var.sup = "violet", repel = TRUE,
+             geom = c("point", "text"), legend = "bottom")
+```
+
+#### COntribución de las variables
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_mfa_var(res.mfa, "quanti.var", col.var = "contrib", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             col.var.sup = "violet", repel = TRUE,
+             geom = c("point", "text"))
+```
+
+
+### Análisis de los individuos en un FA
+
+También podemos analizar a los individuos en el FA. Creo que no es lo primordial, pero se puede. 
+
+Calidad de representación del individuos al análisis de FA
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_mfa_ind(res.mfa, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE)
+```
+
+Individuos perteneciente a cierto grupo o categorias
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_mfa_ind(res.mfa, 
+             habillage = "Label", # color by groups 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, ellipse.type = "confidence", 
+             repel = TRUE # Avoid text overlapping
+             ) 
+```
+
+Otra variante 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_ellipses(res.mfa, c("Label", "Soil"), repel = TRUE)
+```
+
+Los resultados para individuos obtenidos del análisis realizado con un solo grupo se denominan individuos parciales. En otras palabras, un individuo considerado desde el punto de vista de un solo grupo se llama individuo parcial.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_mfa_ind(res.mfa, partial = "all") 
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_mfa_ind(res.mfa, partial = c("1DAM", "1VAU", "2ING")) 
+```
+
+
+## Análisis Factorial Confirmatorio {.tabset .tabset-fade}
+
+El presente curso no cubre el CFA, pero pueden obtener algunas referencias de como proceder en R según los siguientes enlaces:
+
+https://rpubs.com/razzag/320895
+http://www.statpower.net/Content/312/Handout/Confirmatory%20Factor%20Analysis%20with%20R.pdf
+https://www.methodsconsultants.com/tutorial/confirmatory-factor-analysis-using-the-sem-package-in-r/
+https://www.r-bloggers.com/all-together-now-confirmatory-factor-analysis-in-r/
+
+La librería más utilizada es "lavaan", con su funcióin cfa()
+
+```{r }
+
+#Librería
+
+# library(lavaan)
+
+#función
+
+#cfa(model, data=ex_data)
+
+```
+

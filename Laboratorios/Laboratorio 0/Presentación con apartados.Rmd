@@ -1,0 +1,120 @@
+---
+title: "Laboratorio con apartados"
+author: "Oscar Centeno Mora"
+date: "Otra forma de presentar los resultados con el Markdown"
+output: 
+   html_document: 
+       toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+suppressMessages(library(readxl))
+suppressMessages(library(tidyverse))
+suppressMessages(library(neuralnet))
+suppressMessages(library(GGally))
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+
+# Una forma de presentar los trabajos en Markdown  {.tabset .tabset-fade .tabset-pills}
+
+Los resultados de cada uno de los trabajos puede ser expuesta tambié mediante la presente opción.
+
+## Introducción  {.tabset .tabset-fade}
+
+### Sección a.
+
+### Sección b.
+
+
+## Objetivos  {.tabset .tabset-fade}
+
+## Justificación  {.tabset .tabset-fade}
+
+## Metodología: material y métodos  {.tabset .tabset-fade}
+
+### Material
+
+La métodología posee dos partes:
+
+1. Material: datos y los insumos o materia prima (software, etc)
+
+### Métodos
+
+2. Métodos: método de análisis y técnica utilizada
+
+Acá se explica tanto la forma de analizar la data, la forma matemática del
+modelo, entre otros.
+
+## Resultados  {.tabset .tabset-fade}
+
+### Resultados (1)
+
+Estadísticas descriptivas
+
+### Resultados (2)
+
+Resultados Técnica de análisis
+
+### Resultados (3)
+
+Resultados Técnica de análisis
+
+### Resultados (4)
+
+Resultados Técnica de análisis
+
+
+## Conclusisón y discusión  {.tabset .tabset-fade}
+
+
+### Conclusión
+
+Se concluye sobre el análisis. Hasta acá se puede brindar una valoración.
+
+### Discusión
+
+Abre la posibilidad a otras reflexiones, contextualiza el tema, y otras formas
+de abordaje
+
+## Resumiendo {.tabset .tabset-fade}
+
+La composición de una presentación debe poseer el siguiente esquema.
+
+- Introdución
+- Objetivos
+- Justificación
+- Metodologia: materiales y métodos
+- Resultados
+- Conclsión 
+- Discusión
+
+

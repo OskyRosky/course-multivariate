@@ -1,0 +1,451 @@
+---
+title: "Labo 12"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(wordcloud)
+library(biclust)
+library(igraph)
+library(dplyr)
+library(plotly)
+library(rpart)
+library(rpart.plot)
+#library(RWeka)
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+# Árboles de desición {.tabset .tabset-fade .tabset-pills}
+
+EL presente laboratorio expone el análisis de los árboles de decisión. Se presenta:  
+
+1. Paquetes y funciones
+2. Datos del laboratorio (fuentes de datos)
+4. Análisis descriptivo de las variables
+5. Prtición de datos
+6. Árboles de clasificación
+7. Árboles de desición
+8. Estimación del modelo
+9. Evaluación del modelo
+10. Re ajuste del modelo
+
+
+## Sitios web de referencia y datos del laboratorio  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes al análisis de texto descriptivo: 
+
+https://www.tidytextmining.com/ 
+  https://rpubs.com/jboscomendoza/analisis_sentimientos_lexico_afinn  
+https://rpubs.com/jboscomendoza/mineria-de-textos-con-r  
+https://rpubs.com/jboscomendoza/coheed_and_cambria  
+https://rpubs.com/pjmurphy/265713 
+https://medium.com/@actsusanli/text-mining-is-fun-with-r-35e537b12002 
+ https://rpubs.com/Joaquin_AR/334526
+https://blogs.solidq.com/es/advanced-analytics/introduccion-al-text-mining-con-r-parte-i/  
+https://rpubs.com/cbpuschmann/textmining  
+https://rpubs.com/cruzcancel/238997 
+ https://rpubs.com/novrisuhermi/twitter_text_mining_2
+http://www.rpubs.com/peg/136839 
+ https://rpubs.com/HAVB/tangos
+
+## Datos del laboratorio  {.tabset .tabset-fade}
+
+Estos son los datos que se utilizarán en el laboratorio
+
+### El titanic
+
+#### Sobre el archivo de datos
+
+El propósito del siguiente conjunto de datos titanic es predecir que personas son más propensas a sobrevivir la colisión con el iceberg. El conjunto de datos contiene 13 variables y 1309 observaciones. 
+
+```{r echo=FALSE, error=FALSE, warning=FALSE}
+set.seed(678)
+path <- 'https://raw.githubusercontent.com/thomaspernet/data_csv_r/master/data/titanic_csv.csv'
+titanic <-read.csv(path)
+str(titanic)
+```
+
+#### Arreglo y limpieza de los datos
+
+Los datos no están ordenados aleatoriamente sino secuencialmente de acuerdo a la variable categórica de interés. Esto es un problema importante y se debe corregir antes de dividir los datos en entrenamiento y test. Para desordenar la lista de observaciones, se puede usar la función sample()
+
+```{r echo=FALSE, error=FALSE, warning=FALSE}
+shuffle_index <- sample(1:nrow(titanic))
+head(shuffle_index)
+
+titanic <- titanic[shuffle_index, ]
+```
+
+Hacemos una limpieza de los datos...
+
+Existen valores NA’s, por lo tanto deben ser eliminados.
+Prescindir de variables innecesarias
+Crear-convertir variables a tipo factor de ser necesario (e.g., pclass y survived)
+
+```{r echo=FALSE, error=FALSE, warning=FALSE}
+
+clean_titanic <- titanic %>%
+select(-c(home.dest, cabin, name, ticket)) %>% 
+#Convert to factor level
+    mutate(pclass = factor(pclass, levels = c(1, 2, 3), labels = c('Upper', 'Middle', 'Lower')),
+    survived = factor(survived, levels = c(0, 1), labels = c('No', 'Yes'))) %>%
+na.omit()
+glimpse(clean_titanic)
+
+```
+
+### Wine
+
+Los datos que analizamos son datos de vinos blancos de Portugal. El conjunto de datos se puede acceder en Repositorio de Datos de Aprendizaje Automático de UCI http://archive.ics.uci.edu/ml
+
+```{r}
+url  <-"http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv"
+wine <- read.table(file=url, header = T, sep=";")
+
+```
+
+```{r}
+knitr::kable(head(wine),caption = "Resumen de datos")
+str(wine)
+```
+
+## Funciones para crear árboles de decisión {.tabset .tabset-fade}
+
+Existen varios algoritmos implementados en R para llevar a cabo los árboles de decisión: ID3, CART, C4.5 C5.0, CHAID.
+
+Es importante saber que existen variadas implementaciones (librerías) de árboles de decisión en R como por ejemplo: rpart, tree, party, ctree, etc. Algunas se diferencias en las heurísticas utilizadas para el proceso de poda del árbol y otras manejan un componente probabilísto internamente. 
+
+Un ejemplo del esquema general para implementación.
+
+```{r}
+
+# x <- cbind(x_train,y_train)
+
+# fit <- rpart(y_train ~ ., data = x,method="class")
+# summary(fit)
+
+# predicted= predict(fit,x_test)
+```
+
+
+### rpart
+
+https://www.rdocumentation.org/packages/rpart/versions/4.1-15/topics/rpart
+
+```{r}
+# rpart(formula, data, weights, subset, na.action = na.rpart, method,
+#      model = FALSE, x = FALSE, y = TRUE, parms, control, cost, …)
+```
+
+### tree
+
+https://www.rdocumentation.org/packages/tree/versions/1.0-40
+
+```{r}
+# tree(formula, data, weights, subset,
+#     na.action = na.pass, control = tree.control(nobs, ...),
+#     method = "recursive.partition",
+#     split = c("deviance", "gini"),
+#     model = FALSE, x = FALSE, y = TRUE, wts = TRUE, ...)
+```
+
+### party
+
+https://www.rdocumentation.org/packages/partykit/versions/1.2-4/topics/party
+
+```{r}
+# party(node, data, fitted = NULL, terms = NULL, names = NULL, 
+#    info = NULL)
+```
+
+### ctree
+
+https://www.rdocumentation.org/packages/partykit/versions/1.2-4/topics/ctree
+
+```{r}
+# ctree(formula, data, subset, weights, na.action = na.pass, offset, cluster, 
+#     control = ctree_control(…), ytrafo = NULL, 
+#    converged = NULL, scores = NULL, doFit = TRUE, …)
+```
+
+
+## Árboles de clasificación {.tabset .tabset-fade}
+
+### Estadísticas descriptivas
+
+En los análisis, realizar análisis descriptivos para la variable dependiente
+Análisis descriptivos para las variables dependientes
+
+### Separación de datos: entranamiento y validación
+
+Antes de entrenar el modelo vamos a dividir el conjunto de datos en entrenamiento y test. La práctica común es 80-20. Crearemos una función con este propósito.
+
+```{r echo=FALSE, warning=FALSE}
+data_train <- clean_titanic %>% dplyr::sample_frac(.8)
+data_test  <- dplyr::anti_join(clean_titanic, data_train, by = 'X') # se debe tener un id
+data_train <- dplyr::select(data_train, -X)
+data_test <- dplyr::select(data_test, -X)
+head(data_train)
+
+dim(data_train)
+dim(data_test)
+
+```
+
+Conjunto de entrenamiento = 1046 filas (instancias)
+Conjunto de test = 262 filas (instancias)
+
+Ahora verificamos el proceso de aleatoriedad a través de las funciones prop.table() combinada con table()
+
+```{r}
+prop.table(table(data_train$survived))
+```
+
+```{r}
+prop.table(table(data_test$survived))
+```
+
+### Construcción del modelo
+
+El comando para generar un modelo de árbol de decisión, usando la librería rpart lleva el mismo nombre.
+
+```{r echo=FALSE, warning=FALSE}
+fit <- rpart(survived~., data = data_train, method = 'class')
+rpart.plot(fit, extra = 106)
+```
+
+Cada nodo muestra
+
+La clase predecida (died o survived),
+La probabilidad predecida de survival,
+El porcentaje de observaciones en el nodo.
+
+Ahora probemos con las opciones 1 y 9.
+
+
+Opción 1
+```{r echo=FALSE, warning=FALSE}
+rpart.plot(fit, extra = 1)
+```
+
+
+Opción 9
+```{r echo=FALSE, warning=FALSE}
+rpart.plot(fit, extra = 9)
+```
+
+Los árboles de decisión requieren muy poca preparación de datos. Particularmente, no requieren escalamiento de atributos o centrado.
+
+Por defecto, rpart() use la medida de Gini para la división de los nodos.
+
+### Estimación (predicción) del modelo
+
+El modelo ha sido entrenado y ahora puede ser usado para predecir nuevas instancias en el conjunto de datos de test. Para esto se usa la función predict().
+
+```{r}
+#Arguments:
+#- fitted_model: This is the object stored after model estimation. 
+#- df: Data frame used to make the prediction
+#- type: Type of prediction         
+#    - 'class': for classification          
+#    - 'prob': to compute the probability of each class         
+#    - 'vector': Predict the mean response at the node level    
+    
+```
+
+```{r echo=FALSE, warning=FALSE}
+predict_unseen <-predict(fit, data_test, type = 'class')
+```
+
+Contabilizar la coincidencia entre las observaciones de test y los valores predecidos (matriz de confusión).
+
+```{r echo=FALSE, warning=FALSE}
+table_mat <- table(data_test$survived, predict_unseen)
+table_mat
+```
+
+¿Que podemos concluir de esto?
+
+### Rendimiento del modelo
+
+A partir de la matriz de confusión es posible calcular un medida de rendimiento del modelo.
+La matriz de confusión es utilizada en casos de clasificación.
+
+```{r echo=FALSE, warning=FALSE}
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+print(paste('Precisión de la prueba', accuracy_Test))
+```
+
+### Ajustar los hyper-parámetros
+
+Para incluir restricciones definidas por el usuario respecto a cómo elaborar el árbol de decisión se puede utilizar el comando rpart.control() de la librería rpart.
+
+```{r}
+#rpart.control(minsplit = 20, minbucket = round(minsplit/3), maxdepth = 30)
+#Arguments:
+#-minsplit: Set the minimum number of observations in the node before the algorithm perform a split
+#-minbucket:  Set the minimum number of observations in the final node i.e. the leaf
+#-maxdepth: Set the maximum depth of any node of the final tree. The root node is treated a depth 0
+```
+
+Vamos a modificar el ejemplo anterior. Para ello vamos a constuir una función que encapsule el cáculo de la precisión del modelo.
+
+```{r echo=FALSE, warning=FALSE}
+
+accuracy_tune <- function(fit) {
+    predict_unseen <- predict(fit, data_test, type = 'class')
+    table_mat <- table(data_test$survived, predict_unseen)
+    accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+    accuracy_Test
+}
+```
+
+Ahora, vamos a ajustar los parámetros para intentar mejor el rendimiento del modelo sobre los valores por defecto. La precisión que obtuvimos previamente fue de 0.78.
+
+```{r echo=FALSE, warning=FALSE}
+control <- rpart.control(minsplit = 4,
+    minbucket = round(5 / 3),
+    maxdepth = 3,
+    cp = 0)
+tune_fit <- rpart(survived~., data = data_train, method = 'class', control = control)
+accuracy_tune(tune_fit)
+```
+
+En efecto hemos mejorado ligeramente la estimación de 0.78 a 0.79. Como habíamos revisado anteriormente, lo ideal sería aplicar un proceso de validación cruzada para ajustar correctamente y encontrar así la mejor combinación.
+
+## Árboles de regresión {.tabset .tabset-fade}
+
+Queremos predecir la calidad del vino, Quality según otras características del mismo:
+
+acidity
+sugar content
+chlorides
+sulfur
+alcohol
+pH
+density
+
+### Estadísticas descriptivas
+
+Explorando los datos
+
+```{r echo=FALSE, warning=FALSE}
+library(plotly)
+plot_ly(data = wine, x =~quality, type = "histogram")
+```
+
+```{r echo=FALSE, warning=FALSE}
+wine2 <- wine
+wine2$qualitychar <- ifelse( wine2$quality == 3, "a_tres"
+                             , ifelse(wine2$quality == 4, "b_Cuatro"
+                             , ifelse(wine2$quality == 5, "c_cinco"
+                             , ifelse(wine2$quality == 6, "d_Seis"
+                             , ifelse(wine2$quality == 7, "e_Siete"
+                             , ifelse(wine2$quality == 8, "f_Ocho"
+                             , "g_Nueve"))) )))
+
+plot_ly(data = wine2, x = ~qualitychar, y = ~alcohol
+        , color = ~qualitychar
+        , type = "box"
+        , colors = "Dark2"
+        )
+```
+
+Parece que Quality sigue una distribución más o menos Normal.
+
+Veamos las densidades
+
+```{r echo=FALSE, warning=FALSE}
+plot_ly(data = wine2, x = ~qualitychar, y = ~density
+        , color = ~qualitychar, type = "box", colors = "Set1")
+```
+
+### Separación de datos: entranamiento y validación
+
+No es necesario el procesamiento previo de datos para emplear un modelo de árbol de decisión. Para los datos de entrenamiento (training) y prueba (test) vamos a tomar una muestra al azar con una proporción del 75% y del 25% respectivamente.
+
+```{r echo=FALSE, warning=FALSE}
+set.seed(pi)
+itrain     <- sample( 1:4898, size=3750, replace = FALSE)
+wine_train <- wine[itrain, ]
+
+nrow(wine_train)
+
+wine_test  <- wine[-itrain, ]
+```
+
+### Estimación (predicción) del modelo
+
+```{r echo=FALSE, warning=FALSE}
+m.rpart <- rpart(quality ~. 
+                 , data = wine_train)
+m.rpart 
+```
+
+Veamos el árbol
+
+```{r echo=FALSE, warning=FALSE}
+rpart.plot(m.rpart)
+```
+
+
+### Rendimiento - evaluación del modelo
+
+```{r echo=FALSE, warning=FALSE}
+p.rpart <- predict( m.rpart, wine_test )
+
+summary(p.rpart)
+```
+
+```{r echo=FALSE, warning=FALSE}
+summary( wine_test$quality )
+```
+
+Otra forma de analizar el rendimiento del modelo es considerar cómo de diferente, en promedio, ha caído la predicción del valor real: Error absoluto medio (MAE).
+
+```{r echo=FALSE, warning=FALSE}
+MAE <- function(actual, predicted){
+  mean(abs (actual - predicted))
+}
+
+MAE(wine_test$quality, p.rpart)
+```
+
+Un Error Absoluto Medio del 59% es aceptable.
+
+
+
+

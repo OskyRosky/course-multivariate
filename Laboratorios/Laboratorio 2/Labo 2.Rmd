@@ -1,0 +1,374 @@
+---
+title: "Labo 2"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(magrittr) 
+library(dplyr)   
+library(stats)
+library(FactoMineR)
+library(ade4)
+library(amap)
+library(ggplot2)
+library(factoextra)
+
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+
+# Análisis por Componentes Principales (PCA) {.tabset .tabset-fade .tabset-pills}
+
+EL presente laboratorio expone la técnica de PCA. Este mostrará:
+
+1. Funciones para realizar el PCA
+2. El contenido del PCA
+3. Variancia explicada por el PCA
+4. Las proyecciones
+5. Otros elementos de análisis
+
+
+## Sitios web de referencia  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes a las principales .
+
+
+https://uc-r.github.io/pca
+
+https://rpubs.com/Joaquin_AR/287787
+
+https://www.rdocumentation.org/packages/FactoMineR/versions/1.41/topics/PCA
+
+https://statquest.org/2017/11/27/statquest-pca-in-r-clearly-explained/
+
+http://www.math.u-bordeaux.fr/~mchave100p/wordpress/wp-content/uploads/2013/10/ACP-TP.pdf
+
+https://www.datacamp.com/community/tutorials/pca-analysis-r
+
+https://www.r-bloggers.com/computing-and-visualizing-pca-in-r/
+
+http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
+
+https://www.analyticsvidhya.com/blog/2016/03/practical-guide-principal-component-analysis-python/
+
+https://datascienceplus.com/principal-component-analysis-pca-in-r/
+
+http://www.gastonsanchez.com/visually-enforced/how-to/2012/06/17/PCA-in-R/
+
+
+## Datos del laboratorio {.tabset .tabset-fade}
+
+Para el siguiente ejemplo utilizaremos los datos de "decathlon2"
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+data(decathlon2)
+
+```
+
+La estructura del archivo decathlon2 es:
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+str(decathlon2)
+```
+
+
+## Las funciones y librerías del PCA {.tabset .tabset-fade}
+
+Las funciones y librerías parar realizar el PCA en R pueden ser:
+
+
+
+1. prcomp() (stats)
+
+```{r}
+pca1 = prcomp(USArrests, scale. = TRUE)
+```
+
+2. princomp() (stats)
+
+```{r}
+pca2 = princomp(USArrests, cor = TRUE)
+```
+
+3. PCA() (FactoMineR)
+
+```{r}
+pca3 = PCA(USArrests, graph = FALSE)
+```
+
+4. dudi.pca() (ade4)
+
+```{r}
+pca4 = dudi.pca(USArrests, nf = 5, scannf = FALSE)
+```
+
+5. acp() (amap)
+
+```{r}
+pca5 = acp(USArrests)
+```
+
+
+## Elementos de extracción del PCA {.tabset .tabset-fade}
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+data(decathlon2)
+decathlon2.active <- decathlon2[1:23, 1:10]
+
+res.pca <- prcomp(decathlon2.active, scale = TRUE)
+
+```
+
+Del PCA podríamos extraer :
+
+1. Los Eigenvalues
+
+```{r}
+eig.val <- get_eigenvalue(res.pca)
+eig.val
+```
+
+2. Los loadings o cargas
+
+```{r}
+head(res.pca$rotation)
+```
+
+
+3. Los distintos valores de los individuos
+
+```{r}
+# Resultados de los individuos
+res.ind <- get_pca_ind(res.pca)
+res.ind$coord          # Coordinadas
+res.ind$contrib        # Contribución al PCs
+res.ind$cos2           # Calidad de la representación
+```
+
+
+4. Los distintos valores de las variables
+
+```{r}
+# Resultado de las variables
+res.var <- get_pca_var(res.pca)
+res.var$coord          # Coordinadas
+res.var$contrib        # Contribución al PCs
+res.var$cos2           # Calidad de la representación
+```
+
+
+## Variancia explicada {.tabset .tabset-fade}
+
+
+### Porcentaje de la variancia explicada
+
+Veamos el porcentaje de variancia explicada por componente
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+prop_varianza <- res.pca$sdev^2 / sum(res.pca$sdev^2)
+prop_varianza*100
+```
+
+Proporció de la varianza explicada
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data = data.frame(prop_varianza, pc = 1:10),
+       aes(x = pc, y = prop_varianza)) +
+  geom_col(width = 0.3) +
+  scale_y_continuous(limits = c(0,1)) +
+  theme_bw() +
+  labs(x = "Componente principal",
+       y = "Prop. de varianza explicada")
+```
+
+Proporció de la varianza explicada acumulada
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+prop_varianza_acum <- cumsum(prop_varianza)
+prop_varianza_acum
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data = data.frame(prop_varianza_acum, pc = 1:10),
+       aes(x = pc, y = prop_varianza_acum, group = 1)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  labs(x = "Componente principal",
+       y = "Prop. varianza explicada acumulada")
+```
+
+
+### Gráfico de sedimentación
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_eig(res.pca)
+```
+
+## Proyecciones {.tabset .tabset-fade}
+
+### Individuos
+
+Proyección de los individuos
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data(decathlon2)
+decathlon2.active <- decathlon2[1:23, 1:10]
+
+res.pca <- prcomp(decathlon2.active, scale = TRUE)
+
+fviz_pca_ind(res.pca,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+
+```
+
+
+### Variables
+
+Proyección de las variables
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+
+```
+
+### Individuos - Variables
+
+Proyección de individuos y variables
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#2E9FDF", # Variables color
+                col.ind = "#696969"  # Individuals color
+                )
+```
+
+## Otros elementos de análisis {.tabset .tabset-fade}
+
+### Agregar nuevos casos 
+
+Anteriormente, no habíamos dejado de lado ciertos individuos de la compentencia. Bajo el modelo de PCA ya generado, agreguemos estos casos.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Data for the supplementary individuals
+ind.sup <- decathlon2[24:27, 1:10]
+ind.sup[, 1:6]
+
+ind.sup.coord <- predict(res.pca, newdata = ind.sup)
+ind.sup.coord[, 1:4]
+```
+
+Coordenadas de estos nuevos casos en los CP
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ind.sup.coord <- predict(res.pca, newdata = ind.sup)
+ind.sup.coord[, 1:4]
+```
+
+Finalmente, así sería la nueva proyección con los nuevos casos
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Plot of active individuals
+p <- fviz_pca_ind(res.pca, repel = TRUE)
+# Add supplementary individuals
+fviz_add(p, ind.sup.coord, color ="blue")
+```
+
+### Agregar variables
+
+#### Adicionar Variables categóricas 
+
+EL conjunto de datos decathlon2 contienen una variable cualitativa complementaria en las columnas 13 correspondientes al tipo de competiciones.
+
+Las variables cualitativas / categóricas se pueden usar para colorear individuos por grupos. La variable de agrupación debe ser de la misma longitud que el número de individuos activos (aquí 23).
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+groups <- as.factor(decathlon2$Competition[1:23])
+fviz_pca_ind(res.pca,
+             col.ind = groups, # color by groups
+             palette = c("#00AFBB",  "#FC4E07"),
+             addEllipses = TRUE, # Concentration ellipses
+             ellipse.type = "confidence",
+             legend.title = "Groups",
+             repel = TRUE
+             )
+```
+
+Podría interesar el valor de los centroides 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# 1. Individual coordinates
+res.ind <- get_pca_ind(res.pca)
+# 2. Coordinate of groups
+coord.groups <- res.ind$coord %>%
+  as_data_frame() %>%
+  select(Dim.1, Dim.2) %>%
+  mutate(competition = groups) %>%
+  group_by(competition) %>%
+  summarise(
+    Dim.1 = mean(Dim.1),
+    Dim.2 = mean(Dim.2)
+    )
+coord.groups
+
+```
+
+
+#### Adicionar Variables continuas 
+
+También se podrían adicionar variables cuantitativas al análisis
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+quanti.sup <- decathlon2[1:23, 11:12, drop = FALSE]
+head(quanti.sup)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Predict coordinates and compute cos2
+quanti.coord <- cor(quanti.sup, res.pca$x)
+quanti.cos2 <- quanti.coord^2
+# Graph of variables including supplementary variables
+p <- fviz_pca_var(res.pca)
+fviz_add(p, quanti.coord, color ="blue", geom="arrow")
+```

@@ -1,0 +1,663 @@
+---
+title: "Labo 5"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(mclust)
+library(knitr)
+library(DT)
+library(dplyr)
+library(reshape2)
+library(MVN)
+library(biotools)
+library(car)
+library(caret)
+library(rattle.data)
+library(ggplot2)
+library(grid)
+library(ggpubr)
+library(gridExtra)
+library(tidyverse)
+library(MASS)
+library(klaR)
+
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+
+# Análisis de Discriminación (EFA) {.tabset .tabset-fade .tabset-pills}
+
+EL presente laboratorio expone la técnica de LDA y QDA. Se presenta:  
+
+1. Funciones y librerías del DA
+2. Estadísticas descriptivas y supuestos DA
+3. Partición de los datos
+4. Estimación de los modelos lda y qda
+5. Análisis reglas de discriminación  
+6. Gráficos de partición y proyección
+7. Tablas de confusión
+8. Nuevos casos sin categoría de pertenencia.
+
+
+## Sitios web de referencia  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes a la aplicación del FA exploratorio en R: 
+
+https://rpubs.com/Joaquin_AR/233932
+https://rpubs.com/shpotes/277311 
+https://www.ecured.cu/Analisis_discriminante_en_R
+http://halweb.uc3m.es/esp/Personal/personas/jmmarin/esp/DM/tema1dm.pdf
+https://www.statmethods.net/advstats/discriminant.html
+https://rpubs.com/Nolan/298913
+https://rpubs.com/ifn1411/LDA
+https://rstudio-pubs-static.s3.amazonaws.com/35817_2552e05f1d4e4db8ba87b334101a43da.html
+https://github.com/avrilcoghlan/LittleBookofRMultivariateAnalysis/blob/master/src/multivariateanalysis.rst
+
+## Datos del laboratorio {.tabset .tabset-fade}
+
+### Iris
+
+Trabajamos con la más famosa base de datos en el mundo de la analítica: iris. Esta contiene mediciones de 150 flores iris de tres especies diferentes.
+
+Las tres clases del conjunto de datos Iris:
+
+Iris-setosa (n = 50) Iris-versicolor (n = 50) Iris-virginica (n = 50) Las cuatro características del conjunto de datos Iris:
+
+-Longitud del sepal en cm
+-Ancho sepal en cm
+-Longitud del pétalo en cm 
+-Anchura del pétalo en cm.
+
+```{r }
+datatable(iris)
+```
+
+
+### banknote
+
+Se pretende generar un modelo discriminante que permita diferenciar entre billetes verdaderos y falsos. Se han registrado múltiples variables para 100 billetes verdaderos y 100 billetes falsos:
+
+-Status: si es verdadero (genuine) o falso (counterfeit).
+-Length: longitud (mm)
+-Left: Anchura del borde izquierdo (mm)
+-Right: Anchura del borde derecho (mm)
+-Bottom: Anchura del borde inferior (mm)
+-Top: Anchura del borde superior (mm)
+-Diagonal: longitud diagonal (mm)
+
+```{r}
+data(banknote)
+levels(banknote$Status)
+
+datatable(banknote)
+
+```
+
+
+## Funciones y librerías del DA {.tabset .tabset-fade}
+
+Utilizaremos dos funciones: lda y qda.
+
+### lda() (MASS)
+
+La estructura es :
+
+```{r}
+# lda(x, …)
+#  S3 method for formula
+# lda(formula, data, …, subset, na.action)
+
+# S3 method for default
+# lda(x, grouping, prior = proportions, tol = 1.0e-4,
+#    method, CV = FALSE, nu, …)
+
+# S3 method for data.frame
+# lda(x, …)
+
+#  S3 method for matrix
+#  lda(x, grouping, …, subset, na.action)
+```
+
+
+Ver el enlace: https://www.rdocumentation.org/packages/MASS/versions/7.3-51.1/topics/lda
+
+
+### qda()
+
+La estructura es :
+
+```{r}
+# qda(x, …)
+#  S3 method for formula
+# qda(formula, data, …, subset, na.action)
+
+# S3 method for default
+# qda(x, grouping, prior = proportions,
+#     method, CV = FALSE, nu, …)
+
+#  S3 method for data.frame
+#  qda(x, …)
+
+# S3 method for matrix
+#  qda(x, grouping, …, subset, na.action)
+```
+
+Ver el enlace: https://www.rdocumentation.org/packages/MASS/versions/7.3-51.1/topics/qda
+
+## Estadísticas descriptivas y pruebas de supuestos {.tabset .tabset-fade}
+
+### Datos iris
+
+#### Análisis de densidades por especie y variables
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+plot1 <- ggplot(data = iris, aes(x = Sepal.Length)) +
+         geom_density(aes(colour = Species)) + theme_bw()
+plot2 <- ggplot(data = iris, aes(x = Sepal.Width)) +
+         geom_density(aes(colour = Species)) + theme_bw()
+plot3 <- ggplot(data = iris, aes(x = Petal.Length)) +
+         geom_density(aes(colour = Species)) + theme_bw()
+plot4 <- ggplot(data = iris, aes(x = Petal.Width)) +
+         geom_density(aes(colour = Species)) + theme_bw()
+# la función grid.arrange del paquete grid.extra permite ordenar
+# graficos de ggplot2
+ggarrange(plot1, plot2, plot3, plot4, common.legend = TRUE, legend = "bottom")
+```
+
+#### Correlograma
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+pairs(x = iris[, -5], col = c("firebrick", "green3", "blue")[iris$Species],
+      pch = 20)
+```
+
+Las variables Petal.Lenght y Petal.Width son las dos variables con más potencial para poder separar entre clases. Sin embargo, están altamente correlacionadas, por lo que la información que aportan es en gran medida redundante. 
+
+#### Distribución de los predictores de forma individual
+
+Distribución de los predictores de forma individual:
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+par(mfcol = c(3, 4))
+for (k in 1:4) {
+  j0 <- names(iris)[k]
+  x0 <- seq(min(iris[, k]), max(iris[, k]), le = 50)
+  for (i in 1:3) {
+    i0 <- levels(iris$Species)[i]
+    x <- iris[iris$Species == i0, j0]
+    hist(x, proba = T, col = grey(0.8), main = paste("especie", i0),
+    xlab = j0)
+    lines(x0, dnorm(x0, mean(x), sd(x)), col = "red", lwd = 2)
+  }
+}
+
+```
+
+#### Normalidad por especie y variables
+
+QQPlots
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+#representación de cuantiles normales de cada variable para cada especie 
+for (k in 1:4) {
+  j0 <- names(iris)[k]
+  x0 <- seq(min(iris[, k]), max(iris[, k]), le = 50)
+  for (i in 1:3) {
+    i0 <- levels(iris$Species)[i]
+    x <- iris[iris$Species == i0, j0]
+    qqnorm(x, main = paste(i0, j0), pch = 19, col = i + 1) 
+    qqline(x)
+  }
+}
+
+```
+
+Pruebas de normalidad
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+datos_tidy <- melt(iris, value.name = "valor")
+kable(datos_tidy %>% group_by(Species, variable) %>% summarise(p_value_Shapiro.test = round(shapiro.test(valor)$p.value,5)))
+```
+
+La variable petal.width no se distribuye de forma normal en los grupos setosa y versicolor.
+
+#### Pruebas de outliers y Normalidad multivariantes  
+
+Busqueda de posibles outliers
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+outliers <- mvn(data = iris[,-5], mvnTest = "hz", multivariateOutlierMethod = "quan")
+```
+
+Normalidad conjunta
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+royston_test <- mvn(data = iris[,-5], mvnTest = "royston", multivariatePlot = "qq")
+royston_test
+```
+
+Prueba de normalidad de Royston
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+royston_test$multivariateNormality
+```
+
+Prueba de normalidad de Henze-Zirkler
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+hz_test <- mvn(data = iris[,-5], mvnTest = "hz")
+hz_test$multivariateNormality
+```
+
+Ambos test muestran evidencias significativas de falta de normalidad multivariante. El LDA tiene cierta robustez frente a la falta de normalidad multivariante, pero es importante tenerlo en cuenta en la conclusión del análisis.
+
+#### Pruebas de homogeneidad
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+boxM(data = iris[, -5], grouping = iris[, 5])
+```
+
+El test Box’s M muestra evidencias de que la matriz de covarianza no es constante en todos los grupos, lo que a priori descartaría el método LDA en favor del QDA. Sin embargo, como el test Box’s M es muy sensible a la falta de normalidad multivariante, con frecuencia resulta significativo no porque la matriz de covarianza no sea constante sino por la falta de normalidad, cosa que ocurre para los datos de Iris. Por esta razón se va a asumir que la matriz de covarianza sí es constante y que LDA puede alcanzar una buena precisión en la clasificación. En la evaluación del modelo se verá como de buena es esta aproximación. Además, en las conclusiones se debe explicar la asunción hecha. 
+
+### Datos banknote
+
+#### Análisis de los histogramas por variable y clasificación de los billetes
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+p1 <- ggplot(data = banknote, aes(x = Length, fill = Status)) +
+      geom_histogram(position = "identity", alpha = 0.5)
+p2 <- ggplot(data = banknote, aes(x = Left, fill = Status)) +
+      geom_histogram(position = "identity", alpha = 0.5)
+p3 <- ggplot(data = banknote, aes(x = Right, fill = Status)) +
+      geom_histogram(position = "identity", alpha = 0.5)
+p4 <- ggplot(data = banknote, aes(x = Bottom, fill = Status)) +
+      geom_histogram(position = "identity", alpha = 0.5)
+p5 <- ggplot(data = banknote, aes(x = Top, fill = Status)) +
+      geom_histogram(position = "identity", alpha = 0.5)
+ggarrange(p1, p2, p3, p4, p5, nrow = 5, common.legend = TRUE, legend = "bottom")
+
+```
+
+#### Autocorrelograma
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+pairs(x = banknote[,-1], col = c("firebrick", "green3")[banknote$Status],
+      pch = 20)
+```
+
+#### Otras distribuciones de frecuencia
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+par(mfcol = c(2, 6))
+for (k in 2:7) {
+  j0 <- names(banknote)[k]
+  x0 <- seq(min(banknote[, k]), max(banknote[, k]), le = 50)
+  for (i in 1:2) {
+    i0 <- levels(banknote$Status)[i]
+    x <- banknote[banknote$Status == i0, j0]
+    hist(x, proba = T, col = grey(0.8), main = paste( i0), xlab = j0)
+    lines(x0, dnorm(x0, mean(x), sd(x)), col = "red", lwd = 2)
+  }
+}
+```
+
+#### Representación de cuantiles normales de cada variable para cada tipo de billete
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+for (k in 2:7) {
+  j0 <- names(banknote)[k]
+  x0 <- seq(min(banknote[, k]), max(banknote[, k]), le = 50)
+  for (i in 1:2) {
+    i0 <- levels(banknote$Status)[i]
+    x <- banknote[banknote$Status == i0, j0]
+    qqnorm(x, main = paste(i0, j0), pch = 19, col = i + 1) 
+    # los colores 2 y 3 son el rojo y verde
+    qqline(x)
+  }
+}
+```
+
+#### Contraste de normalidad Shapiro-Wilk para cada variable en cada tipo de billete
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+datos_tidy <- melt(banknote, value.name = "valor")
+datos_tidy %>% group_by(Status, variable) %>%
+  summarise(p_value_Shapiro.test = round(shapiro.test(valor)$p.value,5))
+
+```
+
+#### Normalidad multivariante y otras pruebas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+outliers <- mvn(data = banknote[,-1], mvnTest = "hz", multivariateOutlierMethod = "quan")
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+royston_test <- mvn(data = banknote[,-1], mvnTest = "royston", multivariatePlot = "qq")
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+royston_test$multivariateNormality
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+hz_test <- mvn(data = banknote[,-1], mvnTest = "hz")
+hz_test$multivariateNormality
+```
+
+#### Test de homogeneidad
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+boxM(data = banknote[, -1], grouping = banknote[, 1])
+```
+
+## Partición del archivo de datos {.tabset .tabset-fade}
+
+Pera evaluar la regla de decisión, se suele particionar el archivo de datos en entramiento y validación. Esto es un procedimiento típico de los análisis supervisados, y también en la minería de datos. 
+
+```{r  error=FALSE ,message=FALSE, warning=FALSE}
+training_sample <- sample(c(TRUE, FALSE), nrow(iris), replace = T, prob = c(0.6,0.4))
+
+train <- iris[training_sample, ]
+test <- iris[!training_sample, ]
+
+```
+
+Dimensiones del set de entrenamiento
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+dim(train)
+```
+
+Dimensiones del set de validación
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+dim(test)
+```
+
+
+## Estimación del lda y qda {.tabset .tabset-fade}
+
+### Estimación del lda 
+
+```{r}
+lda.iris <- lda(Species ~ ., train)
+lda.iris
+names(lda.iris)
+```
+
+Enfoquemos en la salida, la parte de los coeficientes (podemos verlo vediante el "scaling")
+
+¿Cuál sería entonces las ecuaciones de ambas reglas?
+
+LD1 ?
+LD2 ?
+
+### Estimación del qda
+
+```{r}
+qda.iris <- qda(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width, train)
+qda.iris
+```
+
+Analisando la función qda, no se programó la ecuación del qda...
+
+## Análisis de Regla de discriminación {.tabset .tabset-fade}
+
+Una forma de ver la efectividad de las reglas de separarción en poner en un plano 2D los casos con sus respectivas reglas si hubiese 2. 
+
+```{r}
+plot(lda.iris, col = as.integer(train$Species))
+```
+
+También se puede corroborar mediante el análisis de la posición y variabilidad por categoría de clasificación, en cada regla. El caso de la RD1:
+
+```{r}
+lda.iris <- lda(Species ~ ., train)
+lda.iris
+
+plot(lda.iris, dimen = 1, type = "b")
+```
+Tengo un error para la 2nd dimensión... creo que debe ser porque explica muy poco.
+
+```{r}
+#plot(lda.iris, dimen = 2, type = "both")
+```
+
+Otra forma de ver la efectividad de las reglas es mediante la proyección de la regla y sus 
+inviduos para ciertas variables.
+ 
+Veamos que tanto separa o discrimina la primera regla
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+X <- scale(as.matrix(iris[,-5])) # better scale mean and variance before LDA
+Y <- unclass(iris$Species)
+iris1 <- data.frame(X=X, Y=Y)
+colnames(iris1) <- colnames(iris)
+#head(iris1)
+
+model <- lda(Species ~ . , data=iris1, prior=c(1,1,1)/3)
+
+vec <- c(model$scaling[1,1], model$scaling[3,1])
+v   <- vec / sqrt(sum(vec^2))  # make it a unit vector
+lda1.points <- as.matrix(iris1[,c(1,3)]) %*% v %*% t(v) # to project point X into unit vector v just calculate X.v.v^T
+plot(iris1[,"Sepal.Length"], iris1[,"Petal.Length"], 
+     col=c("blue","green","red")[iris1$Species], pch=19,
+     xlab="Sepal Length", ylab="Petal.Length", ,  main="1st discriminant functions")
+segments(-vec[1],-vec[2],vec[1],vec[2])
+
+# points(lda1.points , col=c("blue","green","red")[iris1$Species], pch=18) # draw projection point
+for(i in 1:nrow(iris1)) {
+  segments(iris1[i,1], iris1[i,3], lda1.points[i,1], lda1.points[i,2], 
+           lty=2, col=c("blue","green","red")[iris1[i,]$Species])
+}
+
+```
+
+Y para la 2nda regla:
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+vec <- c(model$scaling[1,2], model$scaling[3,2])
+v   <- vec / sqrt(sum(vec^2))
+lda2.points <- as.matrix(iris1[,c(1,3)]) %*% v %*% t(v)
+plot(iris1[,"Sepal.Length"], iris1[,"Petal.Length"], 
+     col=c("blue","green","red")[iris1$Species], pch=19,
+     xlab="Sepal Length", ylab="Petal.Length", ,  main="2nd discriminant functions")
+segments(-2*vec[1],-2*vec[2],2*vec[1],2*vec[2])
+
+# points(lda2.points , col=c("blue","green","red")[iris1$Species], pch=18) # draw projection point
+for(i in 1:nrow(iris1)) {
+  segments(iris1[i,1], iris1[i,3], lda2.points[i,1], lda2.points[i,2], 
+           lty=2, col=c("blue","green","red")[iris1[i,]$Species])
+}
+
+```
+
+¿Qué podemos concluir?
+
+## Los gráficos de partición y las proyecciones {.tabset .tabset-fade}
+
+### Particiones clásiscas con partimat
+
+El uso de la función partimat del paquete klaR proporciona una forma alternativa de trazar las funciones discriminantes lineales. partimat emite una serie de gráficos para cada combinación de dos variables. Piense en cada gráfico como una vista diferente de los mismos datos. Las regiones coloreadas delinean cada área de clasificación. Se predice que cualquier observación que caiga dentro de una región será de una clase específica. Cada gráfico también incluye la tasa de error aparente para esa vista de los datos.
+
+Partición lineal
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+partimat(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width, data=train, method="lda")
+```
+
+Partición cuadrática
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+partimat(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width, data=train, method="qda")
+```
+
+### Particiones  partimat cambiando el color
+
+La función partimat() del paquete klar permite representar los límites de clasificación de un modelo discriminante lineal o cuadrático para cada par de predictores. Cada color representa una región de clasificación acorde al modelo, se muestra el centroide de cada región y el valor real de las observaciones.
+
+Partición lineal
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+partimat(Species ~ Sepal.Width + Sepal.Length + Petal.Length + Petal.Width,
+         data = train, method = "lda", prec = 200,
+         image.colors = c("darkgoldenrod1", "snow2", "skyblue2"),
+         col.mean = "firebrick")
+```
+
+Partición cuadrática
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+partimat(Species ~ Sepal.Width + Sepal.Length + Petal.Length + Petal.Width,
+         data = train, method = "qda", prec = 200,
+         image.colors = c("darkgoldenrod1", "snow2", "skyblue2"),
+         col.mean = "firebrick")
+```
+
+### Proyección del modelo: variables y predicciones
+
+Podemos verificar la calidad del análisis mediante las proyeccioes de las variables y las predicciones.
+
+Variables: podemos ver los resultados del modelo de la separación de los casos en los variables.
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+X <- scale(as.matrix(iris[,-5])) # better scale mean and variance before LDA
+Y <- unclass(iris$Species)
+iris1 <- data.frame(X=X, Y=Y)
+colnames(iris1) <- colnames(iris)
+model <- lda(Species ~ . , data=iris1, prior=c(1,1,1)/3)
+plot(iris1[,"Sepal.Length"], iris1[,"Petal.Length"], 
+     col=c("blue","green","red")[iris1$Species], pch=19,
+     xlab="Sepal Length", ylab="Petal.Length")
+means <- model$means
+points(means[,c(1,3)], pch=3, lwd=2, col="purple")
+```
+
+¿Qué podemos decir?
+
+Predicciones.
+
+Podemos para los valores de las reglas verificar si los individuos se están o no separando o aglomerando
+en cierto parte.
+
+LD1: ¿qué podemos decir?
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+pred <- predict(model, iris[,-5])
+# The next horizontal axis are meaningless, they depends on the sample order of the dataset
+
+plot(pred$x[,1], col=c("blue","green","red")[iris1$Species], pch=19) # we can plot them
+
+```
+
+LD2: ¿qué podemos decir?
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Notice that the 2nd discriminant function does not separate that well the 2nd & 3rd class
+plot(pred$x[,2], col=c("blue","green","red")[iris1$Species], pch=19) # we can plot them
+```
+
+## Las tablas de confusión {.tabset .tabset-fade}
+
+### Set de entrenamiento
+
+#### LDA
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+lda.train <- predict(lda.iris)
+train$lda <- lda.train$class
+table(train$lda,train$Species)
+```
+
+--> Recomendable tenerlo mejor en %
+
+¿Qué podemos concluir del modelo para el entrenamiento?
+
+#### QDA
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+qda.train <- predict(qda.iris)
+train$qda <- qda.train$class
+table(train$qda,train$Species)
+```
+
+
+--> Recomendable tenerlo mejor en %
+
+¿Qué podemos concluir del modelo para el entrenamiento? Y comparando LDA y QDA
+
+### Set de validación
+
+#### LDA
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+lda.test <- predict(lda.iris,test)
+test$lda <- lda.test$class
+table(test$lda,test$Species)
+```
+
+
+--> Recomendable tenerlo mejor en %
+
+¿Qué podemos concluir del modelo para el entrenamiento?
+
+#### QDA
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+qda.test <- predict(qda.iris,test)
+test$qda <- qda.test$class
+table(test$qda,test$Species)
+```
+
+--> Recomendable tenerlo mejor en %
+
+¿Qué podemos concluir del modelo para el entrenamiento? Y comparando LDA y QDA
+
+
+
+## Estimar nuevos casos del set de entrenamiento {.tabset .tabset-fade}
+
+Finalmente, el DA es muy útil cuando se quiere clasificar a una unidad en una determinada categoría, 
+pero se sabe sus variables, pero no clasificación. Ejemplo típico en los scoring bancarios. 
+

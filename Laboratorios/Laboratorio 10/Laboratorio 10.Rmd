@@ -1,0 +1,798 @@
+---
+title: "Labo 10"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+devtools::install_github("kassambara/navdata")
+library(navdata)
+library(readr)
+library(network)
+library(tidyverse)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(visNetwork)
+library(networkD3)
+library(corrr)
+library(magrittr)
+library(data.table)
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+# Análisis de redes (Network Analysis) {.tabset .tabset-fade .tabset-pills}
+
+EL presente laboratorio expone el análisis de redes (network analysis) (Cluster Analysis). Se presenta:  
+
+1. Tipo de datos que pueden utilizar el network analysis
+2. Librerías del network analysis
+3. Estructura de datos
+4. Tipos de visualizaciones de redes (networks)
+5. Análisis visual
+6. Indicadores de centralidad
+7. Otros análisis visuales
+8. Otro tipo de redes
+
+
+## Sitios web de referencia y datos del laboratorio  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes al análisis de texto descriptivo: 
+
+https://www.jessesadler.com/post/network-analysis-with-r/ 
+http://www.sthda.com/english/articles/33-social-network-analysis/136-network-analysis-and-manipulation-using-r/ 
+http://statmath.wu.ac.at/research/friday/resources_WS0708_SS08/igraph.pdf  
+http://rpubs.com/harshitshah25/192798  
+http://rpubs.com/wctucker/302110
+https://scottbot.net/tag/networks-demystified/
+https://kateto.net/network-visualization 
+https://kateto.net/sunbelt2019
+https://kateto.net/netscix2016.html 
+https://kateto.net/networks-r-igraph
+https://www.youtube.com/watch?v=Lyi5BAkStDQ 
+https://www.youtube.com/watch?v=Lyi5BAkStDQ 
+https://www.youtube.com/watch?v=xT3EpF2EsbQ 
+https://www.youtube.com/watch?v=TGICEEL-OYI 
+https://www.youtube.com/watch?v=XI_I9aO9f6g
+https://www.youtube.com/watch?v=0xsM0MbRPGE
+
+## Datos del laboratorio  {.tabset .tabset-fade}
+
+Estos son los datos que se utilizarán en el laboratorio
+
+### Cartas de Daniel van der Meulen en 1585
+
+Vamos a estudiar todas las cartas enviadas y recibidas de Daniel van der Meulen en 1585. Los datos son: 1. Escritor 2. Ciudad de envío 3.Ciudad de recepción 4.Fecha
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+
+letters <- read.csv2("C:/Users/oscar.centeno/Desktop/IAM/Social Network/correspondence-data-1585.csv")
+
+head(letters); tail(letters)
+
+str(letters)
+```
+
+### Carros mtcars
+
+Los datos se extrajeron de la revista 1974 Motor Trend de EE. UU. Y comprenden el consumo de combustible y 10 aspectos del diseño y rendimiento del automóvil para 32 automóviles (modelos 1973–74).
+
+mpg:	Miles/(US) gallon
+cyl:	Number of cylinders
+disp:	Displacement (cu.in.)
+hp:	Gross horsepower
+drat:	Rear axle ratio
+wt:	Weight (1000 lbs)
+qsec:	1/4 mile time
+vs:	Engine (0 = V-shaped, 1 = straight)
+am:	Transmission (0 = automatic, 1 = manual)
+gear:	Number of forward gears
+carb:	Number of carburetors
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+head(mtcars)
+tail(mtcars)
+str(mtcars )
+```
+
+Utilizamos el set mtcars para hacer un network de las correlaciones. Antes una pequeña limpieza de datos: 
+
+1. Calcular la matriz de correlación: correlacionar ()
+2. Convierta el triángulo superior a NA: afeitado ()
+3. Estire el marco de datos de correlación en formato largo
+4. Mantener solo alta correlación
+
+```{r}
+res.cor <- mtcars [, c(1, 3:6)] %>%  # (1)
+  t() %>% correlate() %>%            # (2)
+  shave(upper = TRUE) %>%            # (3)
+  stretch(na.rm = TRUE) %>%          # (4)
+  filter(r >= 0.998)                 # (5)
+res.cor
+```
+
+### phone.call2
+
+Datos sobre llamadas en Europa
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+data("phone.call2")
+phone.call2
+```
+
+### Actores y películas
+
+Dos archivos de datos con la información sobre actores y cierta información, y luego sobre películas
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+actors <- read_csv("https://raw.githubusercontent.com/OPER682-Tucker/Social-Network-Analysis/master/Actors.csv")
+movies <- read_csv("https://raw.githubusercontent.com/OPER682-Tucker/Social-Network-Analysis/master/Movies.csv")
+
+actors ; movies
+
+```
+
+
+## Libreríasy funciones del del NA {.tabset .tabset-fade}
+
+Las librerías y funciones del network analysis más relevantes son:
+
+### network
+
+```{r}
+# network(x, vertex.attr=NULL, vertex.attrnames=NULL, directed=TRUE, # hyper=FALSE, loops=FALSE, multiple=FALSE, bipartite = FALSE, ...)
+```
+
+Generalmente luego se puede utilizar la función plot() para viusalizar la red
+
+### igraph
+
+Utilizamos la librería igraph, pero vamos la función graph_from_data_frame()
+
+### tidygraph and ggraph
+
+Los paquetes tidygraph y ggraph son nuevos en el panorama de análisis de red, pero juntos, los dos paquetes proporcionan ventajas reales sobre la red y los paquetes igraph. tidygraph y ggraph representan un intento de llevar el análisis de red al flujo de trabajo tidyverse. tidygraph proporciona una manera de crear un objeto de red que se parece más a un marco de datos o tibble
+
+```{r}
+
+# ggraph(graph, layout = "auto", ...)
+# create_layout(graph, layout, circular, ...)
+
+# S3 method for default
+#create_layout(graph, layout, ...)
+
+# S3 method for dendrogram
+#create_layout(graph, layout, circular = FALSE, ...)
+
+# S3 method for igraph
+#create_layout(graph, layout, circular = FALSE, ...)
+
+# S3 method for hclust
+#create_layout(graph, layout, circular = FALSE, ...)
+
+# S3 method for network
+#create_layout(graph, layout, circular = FALSE, ...)
+```
+
+### visNetwork
+
+La función visNetwork () utiliza una lista de nodos y una lista de bordes para crear un gráfico interactivo. La lista de nodos debe incluir una columna "id", y la lista de bordes debe tener las columnas "desde" y "hasta". La función también traza las etiquetas de los nodos, utilizando los nombres de las ciudades de la columna "etiqueta" en la lista de nodos. Es divertido jugar con el gráfico resultante. Puede mover los nodos y el gráfico utilizará un algoritmo para mantener los nodos correctamente espaciados. También puede acercar y alejar la trama y moverla para volver a centrarla.
+
+```{r}
+# visNetwork(nodes = NULL, edges = NULL, dot = NULL, gephi = NULL,
+#  width = NULL, height = NULL, main = NULL, submain = NULL,
+#  footer = NULL, background = "rgba(0, 0, 0, 0)", ...)
+```
+
+
+### networkD3
+
+Se necesita un poco más de trabajo para preparar los datos para crear un gráfico networkD3. Para hacer un gráfico de networkD3 con una lista de nodos y aristas, los ID deben ser una serie de enteros numéricos que comienzan con 0. Actualmente, los ID de nodos para nuestros datos comienzan con 1, por lo que tenemos que hacer un poco de manipulación de datos. Es posible renumerar los nodos restando 1 de las columnas de ID en los marcos de datos de nodos y bordes. Una vez más, esto se puede hacer con la función mutate (). El objetivo es recrear las columnas actuales, al mismo tiempo que resta 1 de cada ID. La función mutate () funciona creando una nueva columna, pero podemos hacer que reemplace una columna al darle a la nueva columna el mismo nombre que la columna anterior. Aquí, nombro los nuevos marcos de datos con un sufijo d3 para distinguirlos de los nodos anteriores y marcos de datos de bordes.
+
+```{r}
+# nodes_d3 <- mutate(nodes, id = id - 1)
+# edges_d3 <- mutate(edges, from = from - 1, to = to - 1)
+```
+
+La función que crea el gráfico es 
+
+```{r}
+# forceNetwork(Links, Nodes, Source, Target, Value, NodeID, Nodesize, Group,
+#  height = NULL, width = NULL,
+#  colourScale = JS("d3.scaleOrdinal(d3.schemeCategory20);"),    fontSize = 7,
+#  fontFamily = "serif", linkDistance = 50,
+#  linkWidth = JS("function(d) { return Math.sqrt(d.value); }"),
+#  radiusCalculation = JS(" Math.sqrt(d.nodesize)+6"), charge = -30,
+#  linkColour = "#666", opacity = 0.6, zoom = FALSE, legend = FALSE,
+#  arrows = FALSE, bounded = FALSE, opacityNoHover = 0,
+#  clickAction = NULL)
+```
+
+
+### Funciones más relevantes
+
+Las funciones:
+
+1. tbl_graph() :  Crea un objeto de red a partir de datos de nodos y edges
+
+```{r}
+# tbl_graph(
+#  nodes = data$nodes, 
+#  edges = data$edges,
+#  directed = TRUE)
+```
+
+
+2. as_tbl_graph(). Convierte datos y objetos de la red en una red tbl_graph.
+
+```{r}
+# S3 method for tidy_dagitty
+#      as_tbl_graph(x, directed = TRUE, ...)
+# S3 method for dagitty
+#      as_tbl_graph(x, directed = TRUE, ...)
+```
+
+graph_from_data_frame(): que es un poco más sencillo que network, 
+
+```{r}
+# graph_from_data_frame(d = edges, vertices = nodes, 
+#  directed = TRUE)
+```
+
+## Estructura de datos  {.tabset .tabset-fade}
+
+### Matriz adyacente 
+
+Los paquetes de análisis de red necesitan que los datos estén en una forma particular para crear el tipo especial de objeto. Las clases de objetos para red, igraph y tidygraph se basan en matrices de adyacencia, también conocidas como sociomatrices.
+
+Una matriz de adyacencia es una matriz cuadrada en la que los nombres de columna y fila son los nodos de la red. Dentro de la matriz, un 1 indica que hay una conexión entre los nodos y un 0 indica que no hay conexión. Las matrices de adyacencia implementan una estructura de datos muy diferente a los marcos de datos y no encajan dentro del flujo de trabajo
+
+Una lista de borde (edge list) es un marco de datos que contiene un mínimo de dos columnas, una columna de nodos que son el origen de una conexión y otra columna de nodos que son el destino de la conexión. Los nodos en los datos se identifican por identificadores únicos. Si la distinción entre origen y destino es significativa, la red es dirigida. Si la distinción no es significativa, la red no está dirigida. Con el ejemplo de las cartas enviadas entre ciudades, la distinción entre origen y destino es claramente significativa, por lo que la red se dirige. Para los ejemplos a continuación, nombraré la columna de origen como "de" y la columna de destino como "a". Usaré enteros que comiencen con uno como ID de nodo. Una lista de bordes también puede contener columnas adicionales que describen atributos de los bordes, como el aspecto de la magnitud de un borde. Si los bordes tienen un atributo de magnitud, el gráfico se considera ponderado.
+
+```{r}
+edge_list <- tibble(from = c(1, 2, 2, 3, 4), to = c(2, 3, 4, 2, 1))
+node_list <- tibble(id = 1:4)
+
+edge_list ; node_list
+```
+
+La matriz adyacente sería 
+
+```{r}
+m.a <- rbind(c(0,1,0,0),c(0,0,1,1),c(0,1,0,0),c(1,0,0,0))
+m.a
+```
+
+### Carta.MA
+
+Para crear objetos de red a partir de la base de datos de cartas recibidas por Daniel van der Meulen en 1585, crearé tanto una lista de bordes como una lista de nodos. Esto requerirá el uso del paquete dplyr para manipular el marco de datos de las cartas enviadas a Daniel y dividirlo en dos marcos de datos o tablas con la estructura de las listas de bordes y nodos. En este caso, los nodos serán las ciudades desde las cuales los corresponsales de Daniel le enviaron cartas y las ciudades en las que los recibió. La lista de nodos contendrá una columna de "etiqueta", que contiene los nombres de las ciudades. La lista de bordes también tendrá una columna de atributos que mostrará la cantidad de letras enviadas entre cada par de ciudades. 
+
+El primer paso es cargar la biblioteca tidyverse para importar y manipular los datos. La impresión del marco de datos de letras muestra que contiene cuatro columnas: "escritor", "fuente", "destino" y "fecha". En este ejemplo, solo trataremos las columnas "origen" y "destino".
+
+```{r}
+head(letters)
+```
+
+#### Lista de Nodos
+
+Queremos obtener las distintas ciudades de las columnas "fuente" y "destino" y luego unir la información de estas columnas. En el siguiente ejemplo, cambio ligeramente los comandos de los que usé en la publicación anterior para que el nombre de las columnas con los nombres de las ciudades sea el mismo para los marcos de datos de origen y destino para simplificar la función full_join (). Renombro la columna con los nombres de las ciudades como "etiqueta" para adoptar el vocabulario utilizado por los paquetes de análisis de red.
+
+```{r echo=FALSE}
+sources <- letters %>%
+  distinct(source) %>%
+  rename(label = source)
+
+destinations <- letters %>%
+  distinct(destination) %>%
+  rename(label = destination)
+```
+
+Para crear un único marco de datos con una columna con las ubicaciones únicas, necesitamos utilizar una unión completa, ya que queremos incluir todos los lugares únicos de las fuentes de las letras y los destinos.
+
+```{r}
+nodes <- full_join(sources, destinations, by = "label")
+nodes
+```
+
+Esto resulta en un marco de datos con una variable. Sin embargo, la variable contenida en el marco de datos no es realmente lo que estamos buscando. La columna "etiqueta" contiene los nombres de los nodos, pero también queremos tener ID únicas para cada ciudad. Podemos hacer esto agregando una columna "id" al marco de datos de los nodos que contiene números de uno a lo que sea el número total de filas en el marco de datos. Una función útil para este flujo de trabajo es rowid_to_column (), que agrega una columna con los valores de los identificadores de fila y coloca la columna al inicio del marco de datos. Tenga en cuenta que rowid_to_column () es un comando que se puede canalizar, por lo que es posible realizar el full_join () y agregar la columna "id" en un solo comando. El resultado es una lista de nodos con una columna de ID y un atributo de etiqueta.
+
+```{r}
+nodes <- nodes %>% rowid_to_column("id")
+nodes
+```
+
+##### Lista de Edges
+
+La creación de una lista Edges es similar a la anterior, pero se complica por la necesidad de manejar dos columnas de ID en lugar de una. También queremos crear una columna de peso que anote la cantidad de letras enviadas entre cada conjunto de nodos. Para lograr esto, usaré el mismo flujo de trabajo group_by () y summarise(). La diferencia aquí es que queremos agrupar el marco de datos en dos columnas: "origen" y "destino", en lugar de solo una.
+
+Anteriormente, nombramos la columna que cuenta el número de observaciones por grupo "conteo", pero aquí adoptamos la nomenclatura del análisis de red y lo llamo como "peso". El comando final en la canalización elimina la agrupación para el marco de datos instituido por la función group_by (). Esto facilita la manipulación del marco de datos per_route resultante sin obstáculos.
+
+```{r}
+per_route <- letters %>%  
+  group_by(source, destination) %>%
+  summarise(weight = n()) %>% 
+  ungroup()
+per_route
+```
+
+Al igual que la lista de nodos, per_route ahora tiene la forma básica que queremos, pero nuevamente tenemos el problema de que las columnas "origen" y "destino" contienen etiquetas en lugar de identificadores. Lo que debemos hacer es vincular los identificadores que se han asignado en los nodos a cada ubicación en las columnas "origen" y "destino". Esto se puede lograr con otra función de unión. De hecho, es necesario realizar dos combinaciones, una para la columna "fuente" y otra para "destino". En este caso, usaré un left_join () con per_route como el marco de datos izquierdo, porque queremos mantener el número de filas en per_route. Mientras hacemos el left_join, también queremos cambiar el nombre de las dos columnas "id" que se traen desde los nodos. Para la unión utilizando la columna "fuente" cambiaré el nombre de la columna como "desde". La columna traída desde la unión "destino" se renombra como "a". Sería posible hacer ambas uniones en un solo comando con el uso de la tubería. Sin embargo, para mayor claridad, realizaré las uniones en dos comandos separados. Debido a que la unión se realiza a través de dos comandos, observe que el marco de datos al comienzo de la canalización cambia de per_route a bordes, que se crea con el primer comando.
+
+```{r}
+edges <- per_route %>% 
+  left_join(nodes, by = c("source" = "label")) %>% 
+  rename(from = id)
+
+edges <- edges %>% 
+  left_join(nodes, by = c("destination" = "label")) %>% 
+  rename(to = id)
+```
+
+Ahora que los bordes tienen columnas "desde" y "hasta" con ID de nodo, debemos reordenar las columnas para que "desde" y "hasta" a la izquierda del marco de datos. Actualmente, el marco de datos de bordes todavía contiene las columnas "origen" y "destino" con los nombres de las ciudades que corresponden a las ID. Sin embargo, estos datos son superfluos, ya que ya están presentes en los nodos. Por lo tanto, solo incluiré las columnas "desde", "hasta" y "peso" en la función select ().
+
+```{r}
+edges <- select(edges, from, to, weight)
+edges
+```
+
+El marco de datos de bordes no parece muy impresionante; Son tres columnas de enteros. Sin embargo, los bordes combinados con los nodos nos proporcionan toda la información necesaria para crear objetos de red con los paquetes de network, igraph y tidygraph. 
+
+### Creación de objetivos network
+
+Como se dijo antes, se utilizan las librerías network, igraph y tidygraph para llegar a esto.
+
+Las clases de objetos de red para network, igraph y tidygraph están estrechamente relacionadas. Es posible traducir entre un objeto de red y un objeto igraph. Sin embargo, es mejor mantener los dos paquetes y sus objetos separados. De hecho, las capacidades de red de igraph se superponen hasta tal punto que es una buena práctica tener solo uno de los paquetes cargados a la vez. Veremos 1ero el paquete de network, y luego pasaremos a los paquetes igraph y tidygraph.
+
+#### network
+
+La función utilizada para crear un objeto de network es network (). El comando no es particularmente sencillo, pero siempre puede ingresar "?Network() en la consola si se confunde. El primer argumento es, como se indica en la documentación, “una matriz que proporciona la estructura de la red en adyacencia, incidencia o forma edgelista”. El lenguaje demuestra la importancia de las matrices en el análisis de redes, pero en lugar de una matriz, tenemos una lista de bordes. , que cumple el mismo rol. El segundo argumento es una lista de atributos de vértice, que corresponde a la lista de nodos. Observe que el paquete de red utiliza la nomenclatura de los vértices en lugar de los nodos. Lo mismo ocurre con igraph. Luego necesitamos especificar el tipo de datos que se han ingresado en los primeros dos argumentos especificando que la matrix.type es un "edgelist". Finalmente, configuramos ignore.eval en FALSE para que nuestra red pueda ser ponderada y tener en cuenta el número de letras a lo largo de cada ruta.
+
+```{r}
+routes_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
+```
+
+Para ver la clase de lo generado
+
+```{r echo=FALSE}
+class(routes_network)
+```
+
+La impresión de route_network en la consola muestra que la estructura del objeto es bastante diferente de los objetos de estilo de marco de datos, como bordes y nodos. El comando de impresión revela información que se define específicamente para el análisis de red. Muestra que hay 13 vértices o nodos y 15 aristas en route_network. Estos números corresponden al número de filas en los nodos y bordes respectivamente. También podemos ver que los vértices y los bordes contienen atributos como etiqueta y peso. Puede obtener aún más información, incluida una sociomatriz de los datos, ingresando el resumen (route_network)
+
+```{r echo=FALSE}
+routes_network
+```
+
+Ahora es posible obtener una gráfica rudimentaria, si no demasiado estética, de nuestra red (network) de cartas. Tanto los paquetes network así como los paquetes igraph utilizan el sistema de trazado de base de R. Las convenciones para los trazados de base son significativamente diferentes de las de ggplot2. En este caso, luego utilizaremos la funcion plot () predeterminada.
+
+#### igraph
+
+Vamos ahora a discutir el paquete igraph. Primero, debemos limpiar el entorno en R eliminando el paquete de red para que no interfiera con los comandos igraph. También podríamos eliminar las rutas de red, ya que ya no lo usaremos. El paquete de red se puede eliminar con la función detach (), y route_network se elimina con rm (). Después de esto, podemos cargar con seguridad igraph.
+
+```{r}
+# detach(package:network)
+# rm(routes_network)
+
+```
+
+Para crear un objeto igraph a partir de un marco de datos de lista Edge, podemos usar la función graph_from_data_frame (), que es un poco más sencilla que network (). Hay tres argumentos en la función graph_from_data_frame (): d, vértices y dirigido. Aquí, d se refiere a la lista de bordes, los vértices a la lista de nodos y la dirección puede ser TRUE o FALSE dependiendo de si los datos están dirigidos o no.
+
+```{r}
+routes_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE)
+```
+
+Printing the igraph object created by graph_from_data_frame() to the console reveals similar information to that from a network object, though the structure is more cryptic.
+
+```{r}
+routes_igraph
+```
+
+La información principal sobre el objeto está contenida en DNW-13 15 -. Esto indica que route_igraph es una red dirigida (D) que tiene un atributo de nombre (N) y está ponderada (W). El guión después de W nos dice que la gráfica no es bipartita. Los números que siguen describen el número de nodos y bordes en el gráfico respectivamente. A continuación, el nombre (v / c), la etiqueta (v / c), el peso (e / n) proporciona información sobre los atributos del gráfico. Hay dos atributos de vértice (v / c) de nombre, que son los ID, y las etiquetas y un atributo de borde (e / n) de peso. Finalmente, hay una impresión de todos los bordes.
+
+#### tidygraph + ggraph
+
+Los dos paquetes proporcionan ventajas reales sobre el network y igraph. tidygraph y ggraph representan un intento de llevar el análisis de red al flujo de trabajo tidyverse. tidygraph proporciona una manera de crear un objeto de red que se asemeja más a un cuadro de datos o tibble. Esto hace posible utilizar muchas de las funciones de dplyr para manipular los datos de la red. ggraph ofrece una forma de trazar gráficos de red utilizando las convenciones y la potencia de ggplot2. En otras palabras, tidygraph y ggraph le permiten tratar con objetos de red de una manera que sea más consistente con los comandos utilizados para trabajar con tibbles y marcos de datos. Sin embargo, la verdadera promesa de tidygraph y ggraph es que aprovechan el poder de igraph. Esto significa que sacrifica algunas de las capacidades de análisis de red de igraph utilizando tidygraph y ggraph.
+
+Primero, creemos un objeto de red usando tidygraph, que se llama tbl_graph. Un tbl_graph consiste en dos tibbles: un Edge tibble y un nodo tibble. Convenientemente, la clase de objeto tbl_graph es una envoltura alrededor de un objeto igraph, lo que significa que en su base un objeto tbl_graph es esencialmente un objeto igraph.
+
+El vínculo cercano entre los objetos tbl_graph y igraph da como resultado dos formas principales de crear un objeto tbl_graph. Lo primero es usar una lista de aristas y una lista de nodos, usando tbl_graph (). Los argumentos para la función son casi idénticos a los de graph_from_data_frame () con solo un ligero cambio en los nombres de los argumentos.
+
+```{r}
+routes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
+```
+
+La segunda forma de crear un objeto tbl_graph es convertir un igraph o un objeto de red utilizando as_tbl_graph (). Por lo tanto, podríamos convertir route_igraph a un objeto tbl_graph.
+
+```{r}
+routes_igraph_tidy <- as_tbl_graph(routes_igraph)
+```
+
+La impresión de un objeto tbl_graph en la consola da como resultado una salida drásticamente diferente a la de un objeto igraph. Es una salida similar a la de un tibble normal.
+
+```{r}
+routes_tidy
+```
+
+La impresión de route_tidy muestra que es un objeto tbl_graph con 13 nodos y 15 bordes. El comando también imprime las primeras seis filas de "Datos de nodo" y las tres primeras de "Datos de borde". Observe también que indica que los datos del nodo están activos. La noción de un tibble activo dentro de un objeto tbl_graph hace posible manipular los datos en un tibble a la vez. Los nodos tibble están activados de forma predeterminada, pero puede cambiar qué tibble está activo con la función activar (). Por lo tanto, si quisiera reorganizar las filas en los bordes de tibble para enumerar aquellas con el "peso" más alto primero, podría usar active () y luego organizar (). Aquí simplemente imprimo el resultado en lugar de guardarlo.
+
+```{r, warning=FALSE, error=FALSE}
+routes_tidy %>% 
+  activate(edges) %>% 
+  arrange(desc(weight))
+```
+
+## Tipos visuales de redes  {.tabset .tabset-fade}
+
+Una lista casi completa de todos los tios de redes:
+
+https://kateto.net/network-visualization
+https://kateto.net/sunbelt2019 
+
+
+## Análisis visual {.tabset .tabset-fade}
+
+Bajo nuestro ejemplo de las cartas de Daniel van der Meulen en 1585, veamos los diferentes tipos de redes bajo diversas modalidades.
+
+### Cartas --> network
+
+La forma básica es utilizar la función plot(). Con la opción vertex.cex = podemos variar el tamaño del nodo.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+routes_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
+
+plot(routes_network, vertex.cex = 3)
+```
+
+Podemos darle diversas modalidades de posición. Veamos la circular.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+plot(routes_network, vertex.cex = 3, mode = "circle")
+```
+
+### Cartas --> igraph
+
+Con el igraph también utilizamos la función plot(), y vemos otras distribuciones.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+plot(routes_igraph, edge.arrow.size = 0.2)
+```
+
+Aquí, solo quiero cambiar el diseño de los nodos para usar el algoritmo graphopt creado por Michael Schmuhl. Este algoritmo hace que sea más fácil ver la relación entre Haarlem, Antwerp y Delft, que son tres de las ubicaciones más significativas en la red de correspondencia, al extenderlas más.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+plot(routes_igraph, layout = layout_with_graphopt, edge.arrow.size = 0.2)
+```
+
+### Cartas --> tidygraph y ggraph
+
+Veamos la forma básica del ggraph()
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+ggraph(routes_tidy) + geom_edge_link() + geom_node_point() + theme_graph()
+```
+
+Podemos agregar etiquetas, pesos a las líneas, y otros
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+ggraph(routes_tidy, layout = "graphopt") + 
+  geom_node_point() +
+  geom_edge_link(aes(width = weight), alpha = 0.8) + 
+  scale_edge_width(range = c(0.2, 2)) +
+  geom_node_text(aes(label = label), repel = TRUE) +
+  labs(edge_width = "Letters") +
+  theme_graph()
+```
+
+Finalmente, podemos verlo de forma lunar, y tener una idea también de la conexión entre las cartas.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+ggraph(routes_igraph, layout = "linear") + 
+  geom_edge_arc(aes(width = weight), alpha = 0.8) + 
+  scale_edge_width(range = c(0.2, 2)) +
+  geom_node_text(aes(label = label)) +
+  labs(edge_width = "Letters") +
+  theme_graph()
+```
+
+### Llamas --> ggraph
+
+Veamos la red de las llamadas en Europa
+
+```{r echo=FALSE}
+
+library("navdata")
+data("phone.call2")
+phone.net <- tbl_graph(
+  nodes = phone.call2$nodes, 
+  edges = phone.call2$edges,
+  directed = TRUE
+  )
+
+ggraph(phone.net, layout = "graphopt") + 
+  geom_edge_link(width = 1, colour = "lightgray") +
+  geom_node_point(size = 4, colour = "#00AFBB") +
+  geom_node_text(aes(label = label), repel = TRUE)+
+  theme_graph()
+```
+
+### Cartas --> visNetwork
+
+La primera opción interactiva es mediante la función visNetwork(). Veamos el caso estándar:
+
+```{r  echo=FALSE, warning=FALSE, error=FALSE}
+visNetwork(nodes, edges)
+```
+
+De igual forma, podríamos ver el peso de cartas enviada de ciudad en ciudad
+
+```{r  echo=FALSE, warning=FALSE, error=FALSE}
+edges <- mutate(edges, width = weight/5 + 1)
+
+visNetwork(nodes, edges) %>% 
+  visIgraphLayout(layout = "layout_with_fr") %>% 
+  visEdges(arrows = "middle")
+```
+
+### Cartas --> networkD3
+
+Una última forma de hacer un network interactivo es mediante la función forceNetwork(). Acá debemos
+trabajar un poquito antes los nodes y edge con la función mutate
+
+```{r}
+nodes_d3 <- mutate(nodes, id = id - 1)
+edges_d3 <- mutate(edges, from = from - 1, to = to - 1)
+```
+
+La representación sería:
+
+```{r}
+forceNetwork(Links = edges_d3, Nodes = nodes_d3, Source = "from", Target = "to", 
+             NodeID = "label", Group = "id", Value = "weight", 
+             opacity = 1, fontSize = 16, zoom = TRUE)
+```
+
+## Indicadores {.tabset .tabset-fade}
+
+La centralidad es un concepto importante al analizar el gráfico de red. La centralidad de un nodo / borde mide cuán central (o importante) es un nodo o borde en la red.
+
+Consideramos a una entidad importante, si tiene conexiones con muchas otras entidades. La centralidad describe el número de bordes que están conectados a los nodos.
+
+Hay muchos tipos de puntuaciones que determinan la centralidad. Uno de los famosos es el algoritmo de pagerank que impulsó la Búsqueda de Google al principio.
+
+Ejemplos de enfoques comunes para medir la centralidad incluyen:
+
+1.betweenness centrality: La centralidad de intermediación para cada nodo es el número de las rutas más cortas que pasan a través de los nodos.
+
+2. closeness centrality: La centralidad de proximidad mide cuántos pasos se requieren para acceder a todos los demás nodos desde un nodo dado. Describe la distancia de un nodo a todos los demás nodos. Cuanto más central es un nodo, más cerca está de todos los demás nodos.
+
+3. eigenvector centrality: Un nodo es importante si está vinculado a otros nodos importantes. La centralidad de cada nodo es proporcional a la suma de las centralidades de aquellos nodos a los que está conectado. En general, los nodos con altas centralidades de vectores propios son aquellos que están vinculados a muchos otros nodos que, a su vez, están conectados a muchos otros (y así sucesivamente).
+
+4. Hub and authority centarlities  son generalizaciones de la centralidad del vector propio. Un nodo concentrador alto apunta a muchas buenas autoridades y un nodo de alta autoridad recibe muchos concentradores buenos.
+
+### Medidas de Centralidad
+
+El paquete tidygraph contiene más de 10 medidas de centralidad, prefijadas con el término centralidad. Estas medidas incluyen:
+
+```{r}
+# centrality_authority()
+# centrality_betweenness()
+# centrality_closeness()
+# centrality_hub()
+# centrality_pagerank()
+# centrality_eigen()
+# centrality_edge_betweenness()
+```
+
+Todas estas funciones de centralidad devuelven un vector numérico que coincide con los nodos (o bordes en el caso de `centrality_edge_betweenness ()).
+
+### Centralidad en el cine
+
+Ver el siguiente enlace, con el análisis completo de networks de los actores y las películas.
+
+http://rpubs.com/wctucker/302110
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+actors <- read_csv("https://raw.githubusercontent.com/OPER682-Tucker/Social-Network-Analysis/master/Actors.csv")
+movies <- read_csv("https://raw.githubusercontent.com/OPER682-Tucker/Social-Network-Analysis/master/Movies.csv")
+```
+
+Veamos sin embargo las redes antes de llegar a ver las centralidades
+
+Red 1
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+actorNetwork <- graph_from_data_frame(d=movies, vertices=actors, directed=F)
+
+E(actorNetwork)$color <- ifelse(E(actorNetwork)$Movie == "Forest Gump", "green", 
+                         ifelse(E(actorNetwork)$Movie == "Apollo 13", "black",
+                                "orange"))
+V(actorNetwork)$color <- ifelse(V(actorNetwork)$BestActorActress == "Winner", "gold",
+                         ifelse(V(actorNetwork)$BestActorActress == "Nominated","grey",
+                                "lightblue"))
+
+#Re-Plot the Network
+plot(actorNetwork)
+```
+
+Red 2
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+plot(actorNetwork, vertex.frame.color="white")
+
+legend("bottomright", c("Winner","Nominee", "Not Nominated"), pch=21,
+  col="#777777", pt.bg=c("gold","grey","lightblue"), pt.cex=2, cex=.8)
+
+
+legend("topleft", c("Forest Gump","Apollo 13", "The Rock"), 
+       col=c("green","black","orange"), lty=1, cex=.8)
+```
+
+Aunque visualizar la red puede ser útil para examinar los datos a un alto nivel, una de las características más importantes del análisis de redes sociales es la capacidad para describir matemáticamente las características de un nodo en la red. Las posiciones de los nodos en la red a menudo se describen en términos de centralidad. Los individuos posicionados centralmente gozan de una posición de privilegio sobre aquellos que están relegados a la circunferencia de la red (Degenne y Forse 1999). Los tres tipos principales de centralidad son centralidad de grado (degree centrality) , centralidad de intermediación (betweenness centrality) y centralidad de cercanía (closeness centrality).
+
+#### Degree Centrality
+
+La centralidad del grado es el más simple de los métodos, mide el número de conexiones entre un nodo y todos los demás nodos. Al observar la trama anterior, Nicolas Cage está conectado a Sean Connery y Ed Harris, por lo que debería tener un grado de centralidad de grado de 2. El paquete igraph tiene una función, un grado, para medir la centralidad de grado.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+degree(actorNetwork, mode="all")
+```
+
+#### Closeness centrality
+
+La centralidad de proximidad es una evaluación de la proximidad de un nodo a todos los demás nodos de una red, no solo los nodos a los que está conectado directamente. La centralidad de proximidad de un nodo se define por la inversa de la longitud promedio de las rutas más cortas hacia o desde todos los demás nodos del gráfico.
+
+Por ejemplo, para calcular la proximidad bruta, Robin Wright está conectado a Tom Hanks y Gary Sinist por un enlace, a Bill Paxton, Kevin Bacon y Ed Harris por dos enlaces, y a Sean Connery y Nicolas Cage por tres enlaces para un total de 14 campo de golf. Para calcular la proximidad relativa, el número de nodos menos uno (7) se divide por la puntuación bruta de proximidad (14) para una cercanía relativa de .5. Esto corresponde a un número promedio de enlaces a todos los otros nodos de dos.
+
+```{r}
+closeness(actorNetwork, mode="all", weights=NA, normalized=T)
+```
+
+#### Betweenness Centrality
+
+La centralidad de la interrelación ofrece otra forma de medir la centralidad de un individuo. En las redes sociales puede haber personas débilmente conectadas que aún son indispensables para realizar ciertas transacciones. Aunque estos individuos pueden no tener un alto nivel de centralidad de grado, pueden ser puntos de apoyo a través de los cuales se mueve la información. La distancia entre un punto dado y otros dos puntos es su capacidad de pararse en los caminos que los conectan (Degenne y Forse 1999)
+
+```{r}
+betweenness(actorNetwork, directed = F, weights = NA, normalized = T)
+```
+
+### Apreciar diversas centralidades
+
+Ver el siguiente enlace
+
+https://rstudio-pubs-static.s3.amazonaws.com/157501_93a72a58ec614946901e10edf78c1384.html
+
+
+## Otros análisis visuales {.tabset .tabset-fade}
+
+### Correlación 
+
+Veamos el gráfico network para el análisis de correlació del archivo mtcars. Recordemos que ahora vamos a ver la red (netowrk) a partir de correlaciones.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+set.seed(1)
+cor.graph <- as_tbl_graph(res.cor, directed = FALSE)
+```
+
+Veamos lo que contien la estructura de la red o el network
+
+```{r}
+cor.graph
+```
+
+Podemos obtener resultados más gustosos, manipulnado un poco nuestros datos, y ver más información sobre el peso, por "X" categoría, etc...
+
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+# Car groups info
+cars.group <- data_frame(
+  name = rownames(mtcars),
+  cyl = as.factor(mtcars$cyl)
+)
+# Modify the nodes data
+cor.graph <- cor.graph %>%
+  activate(nodes) %>%
+  left_join(cars.group, by = "name") %>%
+  rename(label = name)
+
+cor.graph <- cor.graph %>%
+  activate(edges) %>%
+  rename(weight = r)
+
+cor.graph
+```
+
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+set.seed(1)
+cor.graph <- as_tbl_graph(res.cor, directed = FALSE)
+ggraph(cor.graph) + 
+  geom_edge_link() + 
+  geom_node_point() +
+  geom_node_text(
+    aes(label = name), size = 3, repel = TRUE
+    ) +
+  theme_graph()
+```
+
+### Centralidad en las llamadas telefónicas
+
+Veamos como podemos centralizar las llamadas telefónicas. Acá vemos como podemos introducir la centralidad y sus niveles en el gráfico.
+
+```{r echo=FALSE, warning=FALSE}
+set.seed(123)
+phone.net %>%
+  activate(nodes) %>%
+  mutate(centrality = centrality_authority()) %>% 
+  ggraph(layout = "graphopt") + 
+  geom_edge_link(width = 1, colour = "lightgray") +
+  geom_node_point(aes(size = centrality, colour = centrality)) +
+  geom_node_text(aes(label = label), repel = TRUE)+
+  scale_color_gradient(low = "yellow", high = "red")+
+  theme_graph()
+```
+
+## Otras tipos de redes  {.tabset .tabset-fade}
+
+###  Gráfico de Sankey
+
+Uno de los principales beneficios de networkD3 es que implementa un diagrama Sankey de estilo d3. Un diagrama de Sankey es un buen ajuste para las cartas enviadas a Daniel en 1585. No hay demasiados nodos en los datos, lo que facilita la visualización del flujo de letras. La creación de un diagrama de Sankey utiliza la función sankeyNetwork (), que toma muchos de los mismos argumentos que forceNetwork (). Este gráfico no requiere un argumento de grupo, y el único otro cambio es la adición de una "unidad". Esto proporciona una etiqueta para los valores que aparecen en la información sobre herramientas cuando el cursor se desplaza sobre un elemento del diagrama.
+
+```{r echo=FALSE, warning=FALSE, error=FALSE}
+sankeyNetwork(Links = edges_d3, Nodes = nodes_d3, Source = "from", Target = "to", 
+              NodeID = "label", Value = "weight", fontSize = 16, unit = "Letter(s)")
+```
+
+### radialNetwork 
+
+Podriamos realizar una red interactiva  a partir de la función radialNetwork()
+
+```{r warning=FALSE, error=FALSE}
+#URL <- paste0(
+#        "https://cdn.rawgit.com/christophergandrud/networkD3/",
+#        "master/JSONdata//flare.json")
+
+## Convert to list format
+
+    #Flare <- jsonlite::fromJSON(URL, simplifyDataFrame = FALSE)
+
+# Use subset of data for more readable diagram
+    #Flare$children = Flare$children[1:3]
+
+   #radialNetwork(List = Flare, fontSize = 10, opacity = 0.9)
+```
+
+O en su modalidad de "diagonal"
+
+```{r warning=FALSE, error=FALSE}
+#diagonalNetwork(List = Flare, fontSize = 10, opacity = 0.9)
+```
+
+

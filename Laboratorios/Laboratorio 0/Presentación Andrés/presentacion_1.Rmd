@@ -1,0 +1,147 @@
+---
+title: "Análisis de la Temperatura Mensual en Costa Rica entre 1990 y 2015 mediante regresiones en series temporales"
+author: "Andrés Arguedas"
+date: "5 de septiembre de 2018"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+# Cargamos los paquetes
+
+library(dygraphs)
+library(forecast)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+
+# Definimos el tema de ggplot
+
+theme_set(theme_bw())
+
+# Cargamos los datos que vamos a usar
+
+datos <- read.csv("C:/Users/hp 15-ak006la/Dropbox/UCR/Series Cronologicas II 2018/Tarea 1/tas_1901_2015.csv", header = T, sep = ';', dec = ',')
+
+# Cambiamos los nombres de algunas variables
+
+names(datos)[1:2] <- c("tas", "Year")
+
+# Definimos la serie de tiempo con todos los datos
+
+datos.ts.total <- ts(data = datos$tas, start = c(1901, 1), end = c(2015, 12), frequency = 12)
+
+# Definimos la serie con los datos para el análisis
+
+datos <- subset(datos, Year >= 1990)
+datos.ts <- ts(data = datos$tas, start = c(1990, 1), end = c(2015, 12), frequency = 12)
+```
+
+## Introducción
+
+- Importancia de pronosticar el clima
+- Fenómenos relacionados (El Niño, La Niña, calentamiento global)
+- Datos disponibles desde los 1900, pero no por parte del IMN!
+
+## Metodología
+
+- Datos obtenidos del Observatorio Climático del Grupo del Banco Mundial
+- Se hicieron dos modelos:
+  1. Regresión con tendencia
+  2. Regresión con tendencia y estacionalidad
+- Sólo se escogieron datos desde 1990 hasta el 2015. ¡Veamos por qué!
+
+## Resultados
+
+```{r, results = 'asis'}
+
+# En los chunks le ponemos la opción "results = 'asis'" para que el gráfico sea interactivo
+
+dygraph(datos.ts.total, xlab = "Fecha", ylab = "Temperatura (°C)", main = "Temperatura mensual promedio en Costa Rica") %>%
+  dySeries("V1", label = "Temperatura") %>% # Cambiamos el nombre de la serie
+  dyAxis("x", drawGrid = FALSE) %>% # Eliminamos las líneas del eje X
+  dyRangeSelector() # Agregamos la barra para seleccionar fechas
+```
+
+##
+
+```{r}
+plot.month <- ggmonthplot(datos.ts) + 
+              xlab("Mes") + 
+              ylab("Temperatura (°C)")
+
+datos$Month.f <- factor(datos$Month)
+levels(datos$Month.f) <- c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+
+plot.boxplot <- ggplot(datos, aes(Month.f, tas, fill = Month.f)) + 
+                geom_boxplot() + stat_boxplot(geom ='errorbar') + 
+                guides(fill=FALSE) + 
+                xlab("Mes") + 
+                ylab("Temperatura (°C)") + 
+                theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(plot.month, plot.boxplot, nrow = 2, top = "Distribución de los promedios de temperatura mensual para\n cada mes, en Costa Rica, desde 1990 hasta el 2015", bottom = textGrob(
+    "Fuente: Climate Change Knowledge Portal, The World Bank Group",
+    gp = gpar(fontface = 3, fontsize = 9),
+    hjust = 0,
+    x = 0
+))
+```
+
+## 
+
+```{r, results = 'asis'}
+# Partición de la base en entrenamiento y prueba
+
+datos.prueba <- ts(data = datos$tas[datos$Year >= 2013], start = c(2013, 1), frequency = 12)
+datos.entrenamiento <- ts(data = datos$tas[datos$Year < 2013], end = c(2012, 12), frequency = 12)
+
+# Hacemos las regresiones
+
+serie.1.tendencia <- tslm(datos.entrenamiento ~ trend)
+serie1 <- fitted(serie.1.tendencia)
+serie.2.estacionalidad <- tslm(datos.entrenamiento ~ trend + season)
+serie2 <- fitted(serie.2.estacionalidad)
+
+# Hacemos las estimaciones
+
+pronostico1 <- forecast(serie.1.tendencia, h = 36)  # 3 años
+pronostico2 <- forecast(serie.2.estacionalidad, h = 36)  # 3 años
+final <- cbind(datos.ts, serie1, serie2, pronostico1$mean, pronostico1$lower[, 2], pronostico1$upper[, 2], pronostico2$mean, pronostico2$lower[, 2], pronostico2$upper[, 2])
+
+dygraph(final, xlab = "Fecha", ylab = "Temperatura (°C)", main = "Temperatura mensual promedio en Costa Rica") %>%
+  dyHighlight(highlightSeriesOpts = list(strokeWidth = 3)) %>% # Esto resalta la línea sobre la que se está
+  dyAxis("x", drawGrid = FALSE) %>%
+  dyLegend(width = 400) %>%
+  dyRangeSelector() %>%
+  # Los siguientes comandos especifican los nombres de las series y que tengan el mismo color que la estimación
+  dySeries("datos.ts", label = "Datos observados") %>%
+  dySeries("serie1", label = "Regresión T") %>%
+  dySeries("serie2", label = "Regresión T+E") %>%
+  dySeries(c("pronostico2$lower[, 2]", "pronostico2$mean", "pronostico2$upper[, 2]"), label = "Regresión T+E") %>%
+  dySeries(c("pronostico1$lower[, 2]", "pronostico1$mean", "pronostico1$upper[, 2]"), label = "Regresión T")
+```
+
+##
+
+```{r, results = 'asis'}
+serie.fin <- tslm(datos.ts ~ trend + season)
+pronostico.fin <- forecast(serie.fin, h = 36)
+
+final.fin <- cbind(datos.ts, pronostico.fin$mean, pronostico.fin$lower[, 2], pronostico.fin$upper[, 2])
+
+dygraph(final.fin, xlab = "Fecha", ylab = "Temperatura (°C)", main = "Temperatura mensual promedio en Costa Rica") %>%
+  dyAxis("x", drawGrid = FALSE) %>%
+  dyLegend(width = 400) %>%
+  dyRangeSelector() %>%
+  dySeries("datos.ts", label = "Datos observados") %>%
+  dySeries(c("pronostico.fin$lower[, 2]", "pronostico.fin$mean", "pronostico.fin$upper[, 2]"), label = "Predicción")
+```
+
+## Conclusiones
+
+- Las predicciones de eventos climáticos son muy importantes y se pueden usar otras variables relacionadas, como las emisiones de $\text{CO}^2$ o el ocurrimiento de los fenómenos del Niño y la Niña para obtener mejores resultados.
+- El modelo de regresión con tendencia y estacionalidad, aunque da buenos resultados, probablemente no sea el más adecuado para pronosticar la serie y, si tomaramos datos desde 1901, tendría pronósticos errados.
+
+## Muchas gracias

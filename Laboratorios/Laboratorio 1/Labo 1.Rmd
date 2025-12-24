@@ -1,0 +1,2418 @@
+---
+title: "Labo 1"
+author: "Oscar Centeno Mora "
+date: ""
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plotly)
+library(DT)
+library(ggplot2)
+library(forecast)
+library(tidyverse)
+library(date)
+library(lubridate)
+library(xts)        # To make the convertion data-frame / xts format
+library(dygraphs)
+library(ggExtra)
+library(plotly)
+library(gapminder)
+library(gridExtra)
+library(rattle)
+library(ggridges)
+library(vioplot)
+library(likert)
+library(fmsb) 
+library(wordcloud)
+library(reshape)
+library(tm)
+library(GGally)
+library(car)
+library(RColorBrewer)
+library(ellipse)
+library(corrgram)
+library(treemap)
+library(d3Tree)
+library(dendextend)
+library(ggraph)
+library(igraph)
+library(networkD3)
+library(circlize)
+library(ggmap)
+library(cartography)
+library(maps)
+library(geosphere)
+library(DT)
+library(kableExtra)
+library(formattable)
+library(digest)
+
+
+```
+
+<style>
+table {
+background-color:#FFFFFF;
+}
+</style>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: darkblue;
+}
+</style>
+
+<button onclick="document.body.scrollTop = document.documentElement.scrollTop = 0;" style="
+    position: fixed;
+    bottom: 5px;
+    right: 40px;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    background-color: #0A71A0;
+    border: none;
+    border-radius: 15px;
+    
+">Ir arriba</button>
+
+
+# Formas de visualizar la información {.tabset .tabset-fade .tabset-pills}
+
+Se presentan las principales formas gráficos como tabulares para presentar los datos.
+Primeramente veremos la visualización univariada, la multivariada, los principales formas de
+ver la data en tablas, y final la conjunción de todo que se resumen en un Story-line.
+
+## Sitios web de referencia  {.tabset .tabset-fade}
+
+Los siguientes enlaces son referentes a las principales formas de visualizar la data.
+Prestar mayor atención a las librerías ggplot2, plotly, dygraphs y highcharts.
+
+https://www.r-graph-gallery.com
+
+https://www.statmethods.net/graphs/index.html
+
+https://www.datamentor.io/r-programming/plot-function/
+
+https://plot.ly/r/
+
+https://r4stats.com/examples/graphics-traditional/
+
+http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html
+
+https://rstudio.github.io/dygraphs/
+
+http://jkunst.com/highcharter/
+
+https://www.highcharts.com/blog/data-science/highcharts-for-r-users/
+
+## Visualización univariada  {.tabset .tabset-fade}
+
+### Barras horizontales
+
+#### Barras horizontales descendentes
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+data <- data.frame(
+  name=c("north","south","south-east","north-west","south-west","north-east","west","east"),
+  val=sample(seq(1,10), 8 )
+)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data %>%
+  mutate(name = fct_reorder(name, val)) %>%
+  ggplot( aes(x=name, y=val)) +
+  geom_bar(stat="identity") +
+  coord_flip()
+```
+
+
+#### Barras horizontales ascendentes
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data %>%
+  mutate(name = fct_reorder(name, desc(val))) %>%
+  ggplot( aes(x=name, y=val)) +
+  geom_bar(stat="identity") +
+  coord_flip()
+```
+
+####  Barras horizontales con color y leyenda
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(mtcars, aes(x=as.factor(cyl), fill=as.factor(cyl) )) +
+  geom_bar() + 
+  coord_flip()
+```
+
+
+
+#### Barras horizontales: Lollipop
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create data
+set.seed(1000)
+data=data.frame(x=LETTERS[1:26], y=abs(rnorm(26)))
+
+# Reorder the data
+data=data %>%
+  arrange(y) %>%
+  mutate(x=factor(x,x))
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+p = ggplot(data, aes(x=x, y=y)) +
+  geom_segment( aes(x=x, xend=x, y=0, yend=y ), color=ifelse(data$x %in% c("A","D"), "orange", "grey"), size=ifelse(data$x %in% c("A","D"), 1.3, 0.7) ) +
+  geom_point( color=ifelse(data$x %in% c("A","D"), "orange", "grey"), size=ifelse(data$x %in% c("A","D"), 5, 2) ) +
+  theme_light() +
+  coord_flip() +
+  theme(
+    legend.position="none",
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank()
+  ) +
+  xlab("") +
+  ylab("Value of Y")
+p
+
+```
+
+
+#### Barras horizontales: analizan las respuestas de una escala tipo likert
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Use a provided dataset
+data(pisaitems) 
+items28 <- pisaitems[, substr(names(pisaitems), 1, 5) == "ST24Q"] 
+ 
+# Realize the plot
+l28 <- likert(items28) 
+summary(l28) 
+plot(l28)
+```
+
+
+
+### Barras verticales
+
+#### Barra vertical normal 
+
+De forma personal, utilizo más está modalidad para presentar datos en el tiempo, en donde
+abscisas son los años, y las ordenadas por ejemplo el monto. 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+data=data.frame(name=c("A","B","C","D","E") ,  value=c(3,12,5,18,45))
+# Barplot
+ggplot(data, aes(x=name, y=value)) + geom_bar(stat = "identity")
+```
+
+Le podemos meter colores
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+ggplot(mtcars, aes(x=as.factor(cyl), fill=as.factor(cyl) )) +
+  geom_bar( ) + 
+  theme(legend.position = "none") +
+  labs(x = "My class", y = "Value")
+```
+
+
+#### Gráficos verticales con categorias con barras aledañas o apiladas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# create a dataset
+specie=c(rep("sorgho" , 3) , rep("poacee" , 3) , rep("banana" , 3) , rep("triticum" , 3) )
+condition=rep(c("normal" , "stress" , "Nitrogen") , 4)
+value=abs(rnorm(12 , 0 , 15))
+data=data.frame(specie,condition,value)
+```
+
+
+Barras aledañas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Grouped
+ggplot(data, aes(fill=condition, y=value, x=specie)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+Barras apiladas 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Stacked
+ggplot(data, aes(fill=condition, y=value, x=specie)) + 
+    geom_bar( stat="identity")
+```
+
+Barras apiladas en porcentajes
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Stacked Percent
+ggplot(data, aes(fill=condition, y=value, x=specie)) + 
+    geom_bar( stat="identity", position="fill")
+```
+
+
+#### Barras verticales un tanto más informativas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Data
+name= c("DD","with himself","with DC","with Silur" ,"DC","with himself","with DD","with Silur" ,"Silur","with himself","with DD","with DC" )
+average= sample(seq(1,10) , 12 , replace=T)
+number= sample(seq(4,39) , 12 , replace=T)
+data=data.frame(name,average,number)
+ 
+# Basic Barplot
+my_bar=barplot(data$average , border=F , names.arg=data$name , las=2 , col=c(rgb(0.3,0.1,0.4,0.6) , rgb(0.3,0.5,0.4,0.6) , rgb(0.3,0.9,0.4,0.6) ,  rgb(0.3,0.9,0.4,0.6)) , ylim=c(0,11) , main="" )
+abline(v=c(4.9 , 9.7) , col="grey")
+ 
+# Add the text 
+text(my_bar, data$average+0.4 , paste("n = ",data$number,sep="") ,cex=1) 
+ 
+#Legende
+legend("topleft", legend = c("Alone","with Himself","With other genotype" ) , 
+     col = c(rgb(0.3,0.1,0.4,0.6) , rgb(0.3,0.5,0.4,0.6) , rgb(0.3,0.9,0.4,0.6) ,  rgb(0.3,0.9,0.4,0.6)) , 
+     bty = "n", pch=20 , pt.cex = 2, cex = 0.8, horiz = FALSE, inset = c(0.05, 0.05))
+```
+
+#### Barras verticales con medidas de posición y variabilidad
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data <- data.frame(
+  name=letters[1:5],
+  value=sample(seq(4,15),5),
+  sd=c(1,0.2,3,2,4)
+)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=1.3)
+ 
+ggplot(data) +
+  geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.5) +
+  geom_crossbar( aes(x=name, y=value, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=1.3)
+ 
+ggplot(data) +
+  geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.5) +
+  geom_linerange( aes(x=name, ymin=value-sd, ymax=value+sd), colour="orange", alpha=0.9, size=1.3)
+ 
+ggplot(data) +
+  geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.5) +
+  geom_pointrange( aes(x=name, y=value, ymin=value-sd, ymax=value+sd), colour="orange", alpha=0.9, size=1.3)
+ 
+```
+
+
+### Líneas
+
+#### Linea simple
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Build a Time serie data set
+day=as.Date("2017-06-14") - 0:364
+value=runif(365) + seq(-140, 224)^2 / 10000
+data=data.frame(day, value)
+
+# str(data)
+
+
+# --> función as.Date():  as.Date(data$your_column, "yourformat")  
+as.Date("1jan1960", "%d%b%Y")
+as.Date("02/27/92", "%m/%d/%y")
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+p=ggplot(data, aes(x=day, y=value)) +
+  geom_line() + 
+  xlab("")
+p
+```
+
+#### Más de dos líneas + colores
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+CC <- read.table("http://www.sr.bham.ac.uk/~ajrs/papers/sanderson06/mean_Tprofile-CC.txt" ,  header=TRUE)
+nCC <- read.table("http://www.sr.bham.ac.uk/~ajrs/papers/sanderson06/mean_Tprofile-nCC.txt" , header=TRUE)
+CC$type <- "Cool core"
+nCC$type <- "Non-cool core"
+A <- rbind(CC, nCC)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data=A, aes(x=r.r500, y=sckT, ymin=sckT.lo, ymax=sckT.up, fill=type, linetype=type)) + 
+ geom_line() + 
+ geom_ribbon(alpha=0.5) + 
+ scale_x_log10() + 
+ scale_y_log10() + 
+ xlab(as.expression(expression( paste("Radius (", R[500], ")") ))) + 
+ ylab("Scaled Temperature")
+```
+
+
+#### Gráficos interactivos mediante la librería digraphs
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data=read.table("https://python-graph-gallery.com/wp-content/uploads/bike.csv", header=T, sep=",") %>% head(300)
+# str(data)
+
+data$datetime = ymd_hms(data$datetime)  # --> Since my time is currently a factor, I have to convert it to a date-time format!
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+don=xts(x = data$count, order.by = data$datetime)
+dygraph(don) %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)
+```
+
+
+#### Otras modificaciones a las líneas de tiempo
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data=data.frame(time=seq(from=Sys.Date()-40, to=Sys.Date(), by=1 ), value=runif(41))
+str(data$time)
+data=xts(x = data$value, order.by = data$time)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+dygraph(data) %>%
+  dyOptions( drawPoints = TRUE, pointSize = 4 )
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+dygraph(data) %>%
+  dyOptions( fillGraph=TRUE )
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+dygraph(data) %>%
+  dyOptions( stepPlot=TRUE, fillGraph=TRUE)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+dygraph(data) %>%
+  dyOptions( stemPlot=TRUE)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+trend=sin(seq(1,41))+runif(41)
+data=data.frame(time=seq(from=Sys.Date()-40, to=Sys.Date(), by=1 ), value1=trend, value2=trend+rnorm(41), value3=trend+rnorm(41), value4=trend+rnorm(41) )
+data=xts(x = data[,-1], order.by = data$time)
+
+dygraph(data) %>%
+  dyCandlestick()
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+trend=sin(seq(1,41))+runif(41)
+data=data.frame(time=seq(from=Sys.Date()-40, to=Sys.Date(), by=1 ), trend=trend, max=trend+abs(rnorm(41)), min=trend-abs(rnorm(41, sd=1)))
+data=xts(x = data[,-1], order.by = data$time)
+
+dygraph(data) %>%
+  dySeries(c("min", "trend", "max"))
+```
+
+
+### Puntos (Scatter plot)
+
+#### Gráfico de puntos simple
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(iris, aes(x=Sepal.Length, y=Sepal.Width)) + 
+    geom_point()
+```
+
+
+#### Gráfico de puntos con colores 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(iris, aes(x=Sepal.Length, y=Sepal.Width)) + 
+    geom_point(
+        color="red",
+        fill="blue",
+        shape=21,
+        alpha=0.5,
+        size=6,
+        stroke = 2
+        )
+```
+
+
+#### Otras varaintes más informativas del gráfico de puntos
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(iris, aes(x=Sepal.Length, y=Sepal.Width, color=Species, shape=Species)) + 
+    geom_point(size=6, alpha=0.6)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(iris, aes(x=Sepal.Length, y=Sepal.Width, color=Petal.Length, size=Petal.Length)) + 
+    geom_point(alpha=0.6)
+```
+
+#### Gráfico de puntos con la etiqueta de la unidad de estudio
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data=head(mtcars, 30)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=wt, y=mpg)) +
+  geom_point() + 
+  geom_text(label=rownames(data), nudge_x = 0.25, nudge_y = 0.25, check_overlap = T)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=wt, y=mpg)) +
+  geom_point() + 
+  geom_label(label=rownames(data), nudge_x = 0.25, nudge_y = 0.2)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=wt, y=mpg, fill=cyl)) +
+  geom_label(label=rownames(data), color="white", size=5)
+```
+
+#### Gráfico de puntos conociendo la distribución marginal 
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+p=ggplot(mtcars, aes(x=wt, y=mpg, color=cyl, size=cyl)) +
+      geom_point() +
+      theme(legend.position="none")
+
+# with marginal histogram
+ggMarginal(p, type="histogram")
+
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+p=ggplot(mtcars, aes(x=wt, y=mpg, color=cyl, size=cyl)) +
+      geom_point() +
+      theme(legend.position="none")
+
+# marginal density
+ggMarginal(p, type="density")
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+p=ggplot(mtcars, aes(x=wt, y=mpg, color=cyl, size=cyl)) +
+      geom_point() +
+      theme(legend.position="none")
+
+
+# marginal boxplot
+ggMarginal(p, type="boxplot")
+```
+
+
+Hay un último gráfico de muntos que se llama el Manhattan plot. Ver el siguiente enlace:
+
+https://www.r-graph-gallery.com/wp-content/uploads/2018/02/Manhattan_plot_in_R.html
+
+
+### Burbujas
+
+#### Burbujas simples
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data = diamonds %>% sample_n(200)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=carat, y=price)) +
+  geom_point()
+```
+
+#### Burbujas con magnitudes
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data = diamonds %>% sample_n(200)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=carat, y=price, size=depth)) +
+  geom_point(alpha=0.2)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=carat, y=price, size=depth)) +
+  geom_point(alpha=0.2) +
+  scale_size_continuous(range = c(0.5, 16))
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=carat, y=price, size=depth)) +
+  geom_point(alpha=0.2) +
+  scale_size_continuous( trans="exp", range=c(1, 25))
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=carat, y=price, size=depth, color=carat)) +
+  geom_point(alpha=0.4) +
+  scale_size_continuous( trans="exp", range=c(1, 25)) +
+  scale_colour_continuous(guide = FALSE)
+```
+
+
+#### Burbujas interactivas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+p <- gapminder %>%
+  filter(year==1977) %>%
+  ggplot( aes(gdpPercap, lifeExp, size = pop, color=continent)) +
+  geom_point() +
+  scale_x_log10() +
+  theme_bw()
+
+ggplotly(p)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+a=rnorm(100)
+b=sample( c(1:10) , 100 , replace=T)
+ 
+# Plotly library
+library(plotly)
+ 
+# Make the graph
+my_graph=plot_ly(x=b , y=a , mode="markers" , size=abs(a)/2 , color=ifelse(a>0,"blue","red") ) %>% 
+ 
+#Change hover mode in the layout argument :
+layout( hovermode="closest" )
+ 
+# show the graph
+my_graph
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Let's use the diamonds data set :
+d <- diamonds[sample(nrow(diamonds), 1000), ]
+ 
+# Make a basic scatter plot :
+p=plot_ly(d, x = ~carat, y = ~price, type="scatter", text = paste("Clarity: ", d$clarity),
+        mode = "markers", color = ~carat, size = ~carat)
+p
+```
+
+### Pies 
+
+#### Los pies en general
+
+Los pies no son una opción muy atractiva...
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+Prop=c(3,7,9,1,2)
+ 
+# Make the default Pie Plot
+pie(Prop)
+ 
+# You can also custom the labels:
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E"))
+ 
+# If you give a low value to the "edge" argument, you go from something circular to a shape with edges
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E") , edges=10)
+ 
+# With the radius argument, you choose to zoom in (high values --> big pie) or out (low values --> small pie)
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E") , radius=10)
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E") , radius=0.2)
+ 
+# The clockwise function to decide where you add the first group. If false, starts 90° right, it true, starts on the top of the pie
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E") , clockwise = FALSE)
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E") , clockwise = TRUE)
+ 
+# The density arguments permits to add shading lines, and you can control the angle of this lines with "angle"
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E") , density=10 , angle=c(20,90,30,10,0))
+ 
+# You can change the border of each area with the classical parameters:
+pie(Prop , labels = c("Gr-A","Gr-B","Gr-C","Gr-D","Gr-E")  , border="grey" )
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+par(mar=c(0,0,1,0))
+
+coul <- brewer.pal(5, "BuPu") 
+pie(rep(1, length(coul)), col = coul , main="") 
+```
+
+
+### Anillos o donas
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create test data.
+dat = data.frame(count=c(10, 60, 30), category=c("A", "B", "C"))
+ 
+# Add addition columns, needed for drawing with geom_rect.
+dat$fraction = dat$count / sum(dat$count)
+dat = dat[order(dat$fraction), ]
+dat$ymax = cumsum(dat$fraction)
+dat$ymin = c(0, head(dat$ymax, n=-1))
+ 
+# Make the plot
+p1 = ggplot(dat, aes(fill=category, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
+     geom_rect() +
+     coord_polar(theta="y") +
+     xlim(c(0, 4)) +
+     theme(panel.grid=element_blank()) +
+     theme(axis.text=element_blank()) +
+     theme(axis.ticks=element_blank()) +
+     labs(x="", y="", title="Anillo y sus categorias")   
+  
+p1
+```
+
+
+### Histograma
+
+#### Histograma Simple
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# dataset:
+data=data.frame(value=rnorm(10000))
+ 
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Basic histogram
+ggplot(data, aes(x=value)) + geom_histogram()
+ 
+# Custom Binning. I can just give the size of the bin
+ggplot(data, aes(x=value)) + geom_histogram(binwidth = 0.05)
+```
+
+
+#### Varios histogramas en un gráfico 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+x1 = rnorm(100)
+x2 = rnorm(100)+rep(2,100)
+par(mfrow=c(2,1))
+ 
+#Make the plot
+par(mar=c(0,5,3,3))
+hist(x1 , main="" , xlim=c(-2,5), ylab="Frequency for x1", xlab="", ylim=c(0,25) , xaxt="n", las=1 , col="slateblue1", breaks=10)
+par(mar=c(5,5,0,3))
+hist(x2 , main="" , xlim=c(-2,5), ylab="Frequency for x2", xlab="Value of my variable", ylim=c(25,0) , las=1 , col="tomato3"  , breaks=10)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+par(bg="grey90")
+par(mar=c(0,0,0,0))
+a=rnorm(400 , mean=-5 , sd=12)
+b=rnorm(400 , mean=20 , sd=3)
+c=rnorm(200 , mean=-20 , sd=3)
+hist(a , col=rgb(1,0.2,0.2,0.7) , breaks=50 , xlim=c(-40 , 40) , main="" , ylim=c(-20 , 70) )
+hist(b ,  col=rgb(0,1,0.5,1) , breaks=15 , add=T)
+hist(c ,  col=rgb(0.6,0.4,1,1) , breaks=15 , add=T)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data
+my_variable=rnorm(2000, 0 , 10)
+ 
+# Calculate histogram, but do not draw it
+my_hist=hist(my_variable , breaks=40  , plot=F)
+ 
+# Color vector
+my_color= ifelse(my_hist$breaks < -10, rgb(0.2,0.8,0.5,0.5) , ifelse (my_hist$breaks >=10, "purple", rgb(0.2,0.2,0.2,0.2) ))
+ 
+# Final plot
+plot(my_hist, col=my_color , border=F , main="" , xlab="value of the variable", xlim=c(-40,40) )
+```
+
+
+#### Histogramas interactivos
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+graph=plot_ly(x = rnorm(500), opacity = 0.6, type = "histogram") %>%
+    add_trace(x = rnorm(500)+1) %>%
+    layout(barmode="overlay")
+graph
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Transform a litte bit the dataset to make dots
+don = iris %>% 
+  arrange(Sepal.Length) %>% # sort using the numeric variable that interest you
+  mutate(var_rounded = (Sepal.Length+1) - ( (Sepal.Length+1) %% 0.2 ) ) %>% # This attributes a bin to each observation. Here 0.2 is the size of the bin.
+  mutate(y=ave(var_rounded, var_rounded, FUN=seq_along)) # This calculates the position on the Y axis: 1, 2, 3, 4...
+ 
+
+ 
+# Improve the plot, and make it interactive (right)
+don=don %>% mutate(text=paste("ID: ", rownames(iris), "\n", "Sepal Length: ", Sepal.Length, "\n", "Species:: ", Species, sep="" )) 
+p=ggplot(don, aes(x=var_rounded, y=y) ) +
+  geom_point( aes(text=text), size=6, color="skyblue" ) +
+  xlab('Sepal Length') +
+  ylab('# of individual') +
+  theme_classic() +
+  theme(
+    legend.position="none",
+    axis.line.y = element_blank(),
+    axis.text=element_text(size=15)
+  )
+ 
+# Use the magic of ggplotly to have an interactive version
+ggplotly(p, tooltip="text")
+```
+
+### (DDF) densidades y / o distribución de frecuencia (DDF)
+
+#### Algunas formas de densidad
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+x1 = rnorm(100)
+x2 = rnorm(100, mean=2)
+par(mfrow=c(2,1))
+ 
+#Make the plot
+par(mar=c(0,5,3,3))
+plot(density(x1) , main="" , xlab="", ylim=c(0,1) , xaxt="n", las=1 , col="slateblue1" , lwd=4 )
+par(mar=c(5,5,0,3))
+plot(density(x2) , main="" , xlab="Value of my variable", ylim=c(1,0) , las=1 , col="tomato3" , lwd=4)
+```
+
+Densidad compuesta
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+library(ggplot2)  
+cities <- c("Canberra", "Darwin", "Melbourne", "Sydney")
+ds <- subset(weatherAUS, Location %in% cities & ! is.na(Temp3pm))
+p  <- ggplot(ds, aes(Temp3pm, colour=Location, fill=Location))
+p  <- p + geom_density(alpha=0.55)
+p
+```
+
+Conocidos como Ridgeline
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Data
+head(diamonds)
+ 
+# basic example
+ggplot(diamonds, aes(x = price, y = cut, fill = cut)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none")
+```
+
+
+### Área 
+
+#### Algunas formas de áreas simples
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+set.seed(345)
+Sector <- rep(c("S01","S02","S03","S04","S05","S06","S07"),times=7)
+Year <- as.numeric(rep(c("1950","1960","1970","1980","1990","2000","2010"),each=7))
+Value <- runif(49, 10, 100)
+data <- data.frame(Sector,Year,Value)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=Year, y=Value, fill=Sector)) + 
+    geom_area()
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(data, aes(x=Year, y=Value, fill=Sector)) +
+    geom_area(colour="black", size=.2, alpha=.4) +
+    scale_fill_brewer(palette="Greens", breaks=rev(levels(data$Sector)))
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ata=data[order(data$Sector, decreasing=T) , ]
+ggplot(data, aes(x=Year, y=Value, fill=Sector)) +
+    geom_area(colour="black", size=.2, alpha=.4) +
+    scale_fill_brewer(palette="Greens", breaks=rev(levels(data$Sector)))
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+my_fun=function(vec){ as.numeric(vec[3]) / sum(data$Value[data$Year==vec[2]]) *100 }
+data$prop=apply(data , 1 , my_fun)
+ 
+ggplot(data, aes(x=Year, y=prop, fill=Sector)) + 
+    geom_area(alpha=0.6 , size=1, colour="black")
+```
+
+
+#### Áreas interactivas 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data
+var1=seq(1,8)
+var2=c(0,1,4,1,8,7,5,4)
+var3=c(7,8,4,2,1,2,0,1)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# With only one trace
+p <- plot_ly(x = var1, y = var2, type="scatter", mode="markers", fill = "tozeroy")
+p
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# If you need to add a trace
+p <- plot_ly(x = var1, y = var2, type="scatter", mode="markers", fill = "tozeroy")
+p=add_trace(p, x = var1, y = var3, type="scatter", mode="markers", fill = "tonexty")
+p
+```
+
+
+### Box-plot
+
+#### Box plot básico
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# A really basic boxplot.
+ggplot(mtcars, aes(x=as.factor(cyl), y=mpg)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("cyl")
+```
+
+#### Box plot  con los datos por categoría
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Data 
+names=c(rep("A", 80) , rep("B", 50) , rep("C", 70))
+value=c( sample(2:5, 80 , replace=T) , sample(4:10, 50 , replace=T), 
+       sample(1:7, 70 , replace=T) )
+data=data.frame(names,value)
+ 
+#Graph
+qplot( x=names , y=value , data=data , geom=c("boxplot","jitter") , fill=names)
+```
+
+
+#### Box plot por categorias y sub clases 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# create a data frame
+variety=rep(LETTERS[1:7], each=40)
+treatment=rep(c("high","low"),each=20)
+note=seq(1:280)+sample(1:150, 280, replace=T)
+data=data.frame(variety, treatment ,  note)
+ 
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# grouped boxplot
+ggplot(data, aes(x=variety, y=note, fill=treatment)) + 
+    geom_boxplot()
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# One box per treatment
+ggplot(data, aes(x=variety, y=note, fill=treatment)) + 
+    geom_boxplot() +
+    facet_wrap(~treatment)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# one box per variety
+ggplot(data, aes(x=variety, y=note, fill=treatment)) + 
+    geom_boxplot() +
+    facet_wrap(~variety, scale="free")
+```
+
+#### Otra forma de box plot
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+#Create Data
+names=c(rep("A", 20) , rep("B", 8) , rep("C", 30), rep("D", 80))
+value=c( sample(2:5, 20 , replace=T) , sample(4:10, 8 , replace=T), sample(1:7, 30 , replace=T), sample(3:8, 80 , replace=T) )
+data=data.frame(names,value)
+
+#Calculation of mean and sd of each group ?
+my_mean=aggregate(data$value , by=list(data$names) , mean) ; colnames(my_mean)=c("names" , "mean")
+my_sd=aggregate(data$value , by=list(data$names) , sd) ; colnames(my_sd)=c("names" , "sd")
+my_info=merge(my_mean , my_sd , by.x=1 , by.y=1)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Make the plot
+ggplot(data) + 
+        geom_point(aes(x = names, y = value) , colour=rgb(0.8,0.7,0.1,0.4) , size=5) + 
+        geom_point(data = my_info, aes(x=names , y = mean) , colour = rgb(0.6,0.5,0.4,0.7) , size = 8) +
+        geom_errorbar(data = my_info, aes(x = names, y = sd, ymin = mean - sd, ymax = mean + sd), colour = rgb(0.4,0.8,0.2,0.4) , width = 0.7 , size=1.5)
+```
+
+### Violines
+
+#### Algunos tipos de violines 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(mtcars, aes(factor(cyl), mpg)) + 
+  geom_violin(aes(fill = cyl))
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggplot(mtcars, aes(factor(cyl), mpg)) +
+  geom_violin(aes(fill = factor(cyl)))
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+iris$Species = with(iris, reorder(Species, Sepal.Width, mean))
+
+ggplot(iris, aes(x=Species, y=Sepal.Width, fill=Species)) +
+  geom_violin(alpha=0.6) +
+  theme(legend.position="none")
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data
+treatment=c(rep("A", 40) , rep("B", 40) , rep("C", 40) )
+value=c( sample(2:5, 40 , replace=T) , sample(c(1:5,12:17), 40 , replace=T), sample(1:7, 40 , replace=T) )
+data=data.frame(treatment,value)
+ 
+# Draw the plot
+with(data , vioplot( value[treatment=="A"] , value[treatment=="B"], value[treatment=="C"],  col=rgb(0.1,0.4,0.7,0.7) , names=c("A","B","C") ))
+```
+
+### Radar o la tela de araña
+
+#### Radar para una categoría
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data: note in High school for Jonathan:
+data=as.data.frame(matrix( sample( 2:20 , 10 , replace=T) , ncol=10))
+colnames(data)=c("math" , "english" , "biology" , "music" , "R-coding", "data-viz" , "french" , "physic", "statistic", "sport" )
+
+# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each topic to show on the plot!
+data=rbind(rep(20,10) , rep(0,10) , data)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# The default radar chart proposed by the library:
+radarchart(data)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Custom the radarChart !
+radarchart( data , axistype=1 , 
+
+  #custom polygon
+  pcol=rgb(0.2,0.5,0.5,0.9) , pfcol=rgb(0.2,0.5,0.5,0.5) , plwd=4 , 
+
+  #custom the grid
+  cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,20,5), cglwd=0.8,
+
+  #custom labels
+  vlcex=0.8 
+  )
+```
+
+
+#### Radar para varias categorías
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data: note in High school for several students
+set.seed(99)
+data=as.data.frame(matrix( sample( 0:20 , 15 , replace=F) , ncol=5))
+colnames(data)=c("math" , "english" , "biology" , "music" , "R-coding" )
+rownames(data)=paste("mister" , letters[1:3] , sep="-")
+ 
+# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each topic to show on the plot!
+data=rbind(rep(20,5) , rep(0,5) , data)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Plot 1: Default radar chart proposed by the library:
+radarchart(data)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Plot 2: Same plot with custom features
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9) )
+colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.4) , rgb(0.7,0.5,0.1,0.4) )
+radarchart( data  , axistype=1 , 
+    #custom polygon
+    pcol=colors_border , pfcol=colors_in , plwd=4 , plty=1,
+    #custom the grid
+    cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,20,5), cglwd=0.8,
+    #custom labels
+    vlcex=0.8 
+    )
+legend(x=0.7, y=1, legend = rownames(data[-c(1,2),]), bty = "n", pch=20 , col=colors_in , text.col = "grey", cex=1.2, pt.cex=3)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Plot3: If you remove the 2 first lines, the function compute the max and min of each variable with the available data:
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9) )
+colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.4) , rgb(0.7,0.5,0.1,0.4) )
+radarchart( data[-c(1,2),]  , axistype=0 , maxmin=F,
+    #custom polygon
+    pcol=colors_border , pfcol=colors_in , plwd=4 , plty=1,
+    #custom the grid
+    cglcol="grey", cglty=1, axislabcol="black", cglwd=0.8, 
+    #custom labels
+    vlcex=0.8 
+    )
+legend(x=0.7, y=1, legend = rownames(data[-c(1,2),]), bty = "n", pch=20 , col=colors_in , text.col = "grey", cex=1.2, pt.cex=3)
+```
+
+
+### Circular barplot
+
+####  El barplot simple
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create dataset
+data=data.frame(
+  id=seq(1,60),
+  individual=paste( "Mister ", seq(1,60), sep=""),
+  value=sample( seq(10,100), 60, replace=T)
+)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Make the plot
+p = ggplot(data, aes(x=as.factor(id), y=value)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
+  
+  # This add the bars with a blue color
+  geom_bar(stat="identity", fill=alpha("blue", 0.3)) +
+  
+  # Limits of the plot = very important. The negative value controls the size of the inner circle, the positive one is useful to add size over each bar
+  ylim(-100,120) +
+  
+  # Custom the theme: no axis title and no cartesian grid
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2,4), "cm")     # This remove unnecessary margin around plot
+  ) +
+  
+  # This makes the coordinate polar instead of cartesian.
+  coord_polar(start = 0)
+p
+```
+
+
+#### El barplot con más información
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create dataset
+data=data.frame(
+  id=seq(1,60),
+  individual=paste( "Mister ", seq(1,60), sep=""),
+  value=sample( seq(10,100), 60, replace=T)
+)
+ 
+# ----- This section prepare a dataframe for labels ---- #
+# Get the name and the y position of each label
+label_data=data
+ 
+# calculate the ANGLE of the labels
+number_of_bar=nrow(label_data)
+angle= 90 - 360 * (label_data$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
+ 
+# calculate the alignment of labels: right or left
+# If I am on the left part of the plot, my labels have currently an angle < -90
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+ 
+# flip angle BY to make them readable
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+# ----- ------------------------------------------- ---- #
+ 
+ 
+# Start the plot
+p = ggplot(data, aes(x=as.factor(id), y=value)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
+  
+  # This add the bars with a blue color
+  geom_bar(stat="identity", fill=alpha("skyblue", 0.7)) +
+  
+  # Limits of the plot = very important. The negative value controls the size of the inner circle, the positive one is useful to add size over each bar
+  ylim(-100,120) +
+  
+  # Custom the theme: no axis title and no cartesian grid
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm")      # Adjust the margin to make in sort labels are not truncated!
+  ) +
+  
+  # This makes the coordinate polar instead of cartesian.
+  coord_polar(start = 0) +
+  
+  # Add the labels, using the label_data dataframe that we have created before
+  geom_text(data=label_data, aes(x=id, y=value+10, label=individual, hjust=hjust), color="black", fontface="bold",alpha=0.6, size=2.5, angle= label_data$angle, inherit.aes = FALSE ) 
+ 
+p
+```
+
+Otras modalidades
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create dataset
+data=data.frame(
+  individual=paste( "Mister ", seq(1,60), sep=""),
+  group=c( rep('A', 10), rep('B', 30), rep('C', 14), rep('D', 6)) ,
+  value=sample( seq(10,100), 60, replace=T)
+)
+ 
+# Set a number of 'empty bar' to add at the end of each group
+empty_bar=4
+to_add = data.frame( matrix(NA, empty_bar*nlevels(data$group), ncol(data)) )
+colnames(to_add) = colnames(data)
+to_add$group=rep(levels(data$group), each=empty_bar)
+data=rbind(data, to_add)
+data=data %>% arrange(group)
+data$id=seq(1, nrow(data))
+ 
+# Get the name and the y position of each label
+label_data=data
+number_of_bar=nrow(label_data)
+angle= 90 - 360 * (label_data$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+ 
+# Make the plot
+p = ggplot(data, aes(x=as.factor(id), y=value, fill=group)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
+  geom_bar(stat="identity", alpha=0.5) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar() + 
+  geom_text(data=label_data, aes(x=id, y=value+10, label=individual, hjust=hjust), color="black", fontface="bold",alpha=0.6, size=2.5, angle= label_data$angle, inherit.aes = FALSE ) 
+ 
+p
+```
+
+Es mejor si está ordenado 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data=data.frame(
+  individual=paste( "Mister ", seq(1,60), sep=""),
+  group=c( rep('A', 10), rep('B', 30), rep('C', 14), rep('D', 6)) ,
+  value=sample( seq(10,100), 60, replace=T)
+)
+ 
+
+data = data %>% arrange(group, value)
+
+# Set a number of 'empty bar' to add at the end of each group
+empty_bar=4
+to_add = data.frame( matrix(NA, empty_bar*nlevels(data$group), ncol(data)) )
+colnames(to_add) = colnames(data)
+to_add$group=rep(levels(data$group), each=empty_bar)
+data=rbind(data, to_add)
+data=data %>% arrange(group)
+data$id=seq(1, nrow(data))
+ 
+# Get the name and the y position of each label
+label_data=data
+number_of_bar=nrow(label_data)
+angle= 90 - 360 * (label_data$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+ 
+# Make the plot
+p = ggplot(data, aes(x=as.factor(id), y=value, fill=group)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
+  geom_bar(stat="identity", alpha=0.5) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar() + 
+  geom_text(data=label_data, aes(x=id, y=value+10, label=individual, hjust=hjust), color="black", fontface="bold",alpha=0.6, size=2.5, angle= label_data$angle, inherit.aes = FALSE ) 
+ 
+p
+
+```
+
+
+### Nube de palabras
+
+#### La idea de la nube de palabras
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+#Create a list of words (Random words concerning my work)
+a=c("Cereal","WSSMV","SBCMV","Experimentation","Talk","Conference","Writing", 
+   "Publication","Analysis","Bioinformatics","Science","Statistics","Data", 
+   "Programming","Wheat","Virus","Genotyping","Work","Fun","Surfing","R", "R",
+   "Data-Viz","Python","Linux","Programming","Graph Gallery","Biologie", "Resistance",
+   "Computing","Data-Science","Reproductible","GitHub","Script")
+
+#I give a frequency to each word of this list 
+b=sample(seq(0,1,0.01) , length(a) , replace=TRUE) 
+
+#The package will automatically make the wordcloud ! (I add a black background)
+par(bg="black") 
+wordcloud(a , b , col=terrain.colors(length(a) , alpha=0.9) , rot.per=0.3 )
+```
+
+
+#### Nubes y sus diferentes modalidades
+
+Ver los siguientes enlaces
+
+http://www.r-graph-gallery.com/102-text-mining-and-wordcloud/
+
+https://www.r-graph-gallery.com/196-the-wordcloud2-library/
+
+## Visualización multivariada  {.tabset .tabset-fade}
+
+###  Correlograma 
+
+#### Correlograma normal
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Data example
+data=mtcars[ , c(1,3:6)]
+ 
+#Make the plot
+plot(data , pch=20 , cex=1.5 , col=rgb(0.5, 0.8, 0.9, 0.7))
+
+# Let's use the car dataset proposed by R
+data=mtcars
+ 
+# Make the plot
+my_colors <- brewer.pal(nlevels(as.factor(data$cyl)), "Set2")
+scatterplotMatrix(~mpg+disp+drat|cyl, data=data , reg.line="" , smoother="", col=my_colors , smoother.args=list(col="grey") , cex=1.5 , pch=c(15,16,17) , main="Scatter plot with Three Cylinder Options")
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create data 
+sample_data <- data.frame( v1 = 1:100 + rnorm(100,sd=20), v2 = 1:100 + rnorm(100,sd=27), v3 = rep(1, 100) + rnorm(100, sd = 1)) 
+sample_data$v4 = sample_data$v1 ** 2 
+sample_data$v5 = -(sample_data$v1 ** 2) 
+ 
+# Check correlation between variables
+cor(sample_data) 
+ 
+# Check correlations (as scatterplots), distribution and print corrleation coefficient 
+ggpairs(sample_data) 
+ 
+# Nice visualization of correlations
+ggcorr(sample_data, method = c("everything", "pearson")) 
+```
+
+
+#### Matriz informativas de correlogramas con óvalos
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Use of the mtcars data proposed by R
+data=cor(mtcars)
+ 
+# Build a Pannel of 100 colors with Rcolor Brewer
+my_colors <- brewer.pal(5, "Spectral")
+my_colors=colorRampPalette(my_colors)(100)
+ 
+# Order the correlation matrix
+ord <- order(data[1, ])
+data_ord = data[ord, ord]
+plotcorr(data_ord , col=my_colors[data_ord*50+50] , mar=c(1,1,1,1)  )
+```
+
+
+#### Otros tipos de correlogramas
+
+Ver las páginas
+
+http://www.sthda.com/english/wiki/visualize-correlation-matrix-using-correlogram
+
+https://cran.r-project.org/web/packages/corrgram/vignettes/corrgram_examples.html
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+head(baseball)
+round(cor(baseball[, 5:14], use="pair"),2)
+
+#1
+vars2 <- c("Assists","Atbat","Errors","Hits","Homer","logSal",
+           "Putouts","RBI","Runs","Walks","Years")
+corrgram(baseball[,vars2], order=TRUE,
+         main="Baseball data PC2/PC1 order",
+         lower.panel=panel.shade, upper.panel=panel.pie,
+         diag.panel=panel.minmax, text.panel=panel.txt)
+
+#2
+corrgram(baseball[,vars2], main="Baseball data (alphabetic order)")
+
+#3
+corrgram(baseball[,vars2], order=TRUE,
+         main="Baseball data (PC order)",
+         panel=panel.shade, text.panel=panel.txt)
+
+#4
+corrgram(baseball, order=TRUE, main="Baseball data (PC order)")
+
+#5
+corrgram(auto, order=TRUE, main="Auto data (PC order)")
+
+```
+
+Etc...
+
+### Heatmap 
+
+#### Heatmap normal
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+data=as.matrix(mtcars)
+head(data)
+
+
+
+# Default Heatmap (left)
+
+
+heatmap(data, Colv = NA, Rowv = NA, scale="column")
+
+
+```
+
+
+#### Heatmap con un dendograma
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+heatmap(data, scale="column")
+
+```
+
+
+#### Heatmap interactio 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+#basic heatmap
+ plot_ly(x=colnames(data), y=rownames(data), z = data, type = "heatmap")
+ 
+# with normalization (right)
+data=apply(data, 2, function(x){x/mean(x)})
+plot_ly(x=colnames(data), y=rownames(data), z = data, type = "heatmap")
+
+```
+
+
+### Distribución conjuntas
+
+#### Distribución conjuntas básicas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+a <- data.frame( x=rnorm(20000, 10, 1.9), y=rnorm(20000, 10, 1.2) )
+b <- data.frame( x=rnorm(20000, 14.5, 1.9), y=rnorm(20000, 14.5, 1.9) )
+c <- data.frame( x=rnorm(20000, 9.5, 1.9), y=rnorm(20000, 15.5, 1.9) )
+data <- rbind(a,b,c)
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Basic scatterplot
+ggplot(data, aes(x=x, y=y) ) +
+  geom_point()
+```
+
+``` {r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=x, y=y) ) +
+  geom_bin2d() +
+  theme_bw()
+ 
+# Number of bins in each direction?
+ggplot(data, aes(x=x, y=y) ) +
+  geom_bin2d(bins = 70) +
+  theme_bw()
+
+```
+
+
+#### Distribución conjuntas Hexbin
+
+``` {r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(data, aes(x=x, y=y) ) +
+  geom_hex() +
+  theme_bw()
+ 
+# Number of bins in each direction?
+ggplot(data, aes(x=x, y=y) ) +
+  geom_hex(bins = 70) +
+  theme_bw()
+
+```
+
+#### Gráficos de contorno
+
+``` {r echo=FALSE, message=FALSE, warning=FALSE}
+# Show the contour only
+ggplot(data, aes(x=x, y=y) ) +
+  geom_density_2d()
+ 
+# Show the area only
+ggplot(data, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon")
+ 
+# Area + contour
+ggplot(data, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="white")
+ 
+# Using raster
+ggplot(data, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    legend.position='none'
+  )
+
+```
+
+
+#### Gráficos de contorno con calor
+
+``` {r echo=FALSE, message=FALSE, warning=FALSE}
+# Call the palette with a number
+ggplot(data, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_fill_distiller(palette=4, direction=-1) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    legend.position='none'
+  )
+ 
+# The direction argument allows to reverse the palette
+ggplot(data, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_fill_distiller(palette=4, direction=1) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    legend.position='none'
+  )
+ 
+# You can also call the palette using a name.
+ggplot(data, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_fill_distiller(palette= "Spectral", direction=1) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    legend.position='none'
+  )
+
+```
+
+### Treemap
+
+#### Treemap normal 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data
+group=c("group-1","group-2","group-3")
+value=c(13,5,22)
+data=data.frame(group,value)
+ 
+# treemap
+treemap(data,
+            index="group",
+            vSize="value",
+            type="index"
+            )
+
+
+```
+
+#### Treemap con categorias 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Build Dataset
+group=c(rep("group-1",4),rep("group-2",2),rep("group-3",3))
+subgroup=paste("subgroup" , c(1,2,3,4,1,2,1,2,3), sep="-")
+value=c(13,5,22,12,11,7,3,1,23)
+data=data.frame(group,subgroup,value)
+ 
+# treemap
+treemap(data,
+            index=c("group","subgroup"),
+            vSize="value",
+            type="index"
+            )            
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data
+group=c(rep("group-1",4),rep("group-2",2),rep("group-3",3))
+subgroup=paste("subgroup" , c(1,2,3,4,1,2,1,2,3), sep="-")
+value=c(13,5,22,12,11,7,3,1,23)
+data=data.frame(group,subgroup,value)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Custom labels:
+treemap(data, index=c("group","subgroup"),     vSize="value", type="index",
+ 
+    fontsize.labels=c(15,12),                # size of labels. Give the size per level of aggregation: size for group, size for subgroup, sub-subgroups...
+    fontcolor.labels=c("white","orange"),    # Color of labels
+    fontface.labels=c(2,1),                  # Font of labels: 1,2,3,4 for normal, bold, italic, bold-italic...
+    bg.labels=c("transparent"),              # Background color of labels
+    align.labels=list(
+        c("center", "center"), 
+        c("right", "bottom")
+        ),                                   # Where to place labels in the rectangle?
+    overlap.labels=0.5,                      # number between 0 and 1 that determines the tolerance of the overlap between labels. 0 means that labels of lower levels are not printed if higher level labels overlap, 1  means that labels are always printed. In-between values, for instance the default value .5, means that lower level labels are printed if other labels do not overlap with more than .5  times their area size.
+    inflate.labels=F,                        # If true, labels are bigger when rectangle is bigger.
+ 
+)
+
+# Custom borders:
+treemap(data, index=c("group","subgroup"), vSize="value", type="index",
+ 
+    border.col=c("black","white"),             # Color of borders of groups, of subgroups, of subsubgroups ....
+    border.lwds=c(7,2)                         # Width of colors
+        
+    )
+
+# Custom borders:
+treemap(data, index=c("group","subgroup"), vSize="value", 
+ 
+    type="index",                            # How you color the treemap. type help(treemap) for more info
+    palette = "Set1",                        # Select your color palette from the RColorBrewer presets or make your own.
+    title="My Treemap",                      # Customize your title
+    fontsize.title=12,                       # Size of the title
+ 
+)   
+
+```
+
+
+#### Treemap interactivo 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# dataset
+# group=c(rep("group-1",4),rep("group-2",2),rep("group-3",3))
+# subgroup=paste("subgroup" , c(1,2,3,4,1,2,1,2,3), sep="-")
+# value=c(13,5,22,12,11,7,3,1,23)
+# data=data.frame(group,subgroup,value)
+ 
+# basic treemap
+# p=treemap(data,
+#            index=c("group","subgroup"),
+#            vSize="value",
+#            type="index"
+#            )            
+ 
+#  make it interactive ("rootname" becomes the title of the plot):
+# inter=d3tree2( p ,  rootname = "General" )
+```
+
+
+### Dendograma
+
+#### Dendograma simple
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+sample=paste(rep("sample_",24) , seq(1,24) , sep="")
+specie=c(rep("dicoccoides" , 8) , rep("dicoccum" , 8) , rep("durum" , 8))
+treatment=rep(c(rep("High",4 ) , rep("Low",4)),3)
+data=data.frame(sample,specie,treatment)
+for (i in seq(1:5)){
+  gene=sample(c(1:40) , 24 )
+  data=cbind(data , gene)
+  colnames(data)[ncol(data)]=paste("gene_",i,sep="")
+ }
+data[data$treatment=="High" , c(4:8)]=data[data$treatment=="High" , c(4:8)]+100
+data[data$specie=="durum" , c(4:8)]=data[data$specie=="durum" , c(4:8)]-30
+#data
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Euclidean distance
+rownames(data)=data[,1]    
+dist=dist(data[ , c(4:8)] , diag=TRUE)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+hc=hclust(dist)
+plot(hc)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+  dhc=as.dendrogram(hc)
+    par(mar=c(4,4,2,2))
+    plot(dhc[[2]] , main= "zoom on a part of the dendrogram")
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+hc=hclust(dist)
+dhc=as.dendrogram(hc)
+```
+
+
+#### Dendograma más analítico
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Data
+head(mtcars)
+ 
+# Clusterisation using 3 variables
+mtcars %>% select(mpg, cyl, disp) %>% dist() %>% hclust() %>% as.dendrogram() -> dend
+ 
+# Plot
+par(mar=c(7,3,1,1))  # Increase bottom margin to have the complete label
+plot(dend)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+par(mar=c(7,3,1,1))
+ 
+# Left:
+dend %>% 
+  # Custom branches
+  set("branches_col", "grey") %>% set("branches_lwd", 3) %>%
+  # Custom labels
+  set("labels_col", "orange") %>% set("labels_cex", 0.8) %>%
+  plot()
+ 
+# About nodes: you can choose to display all nodes, or just leaf nodes:
+dend %>% set("nodes_pch", 19)  %>% set("nodes_cex", 0.7) %>% set("nodes_col", "orange") %>% plot()
+dend %>% set("leaves_pch", 19)  %>% set("leaves_cex", 0.7) %>% set("leaves_col", "skyblue") %>% plot()
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Color in function of the cluster
+par(mar=c(1,1,1,7))
+dend %>%
+  set("labels_col", value = c("skyblue", "orange", "grey"), k=3) %>%
+  set("branches_k_color", value = c("skyblue", "orange", "grey"), k = 3) %>%
+  plot(horiz=TRUE, axes=FALSE)
+abline(v = 350, lty = 2)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Highlight a cluster with rectangle
+par(mar=c(9,1,1,1))
+dend %>%
+  set("labels_col", value = c("skyblue", "orange", "grey"), k=3) %>%
+  set("branches_k_color", value = c("skyblue", "orange", "grey"), k = 3) %>%
+  plot(axes=FALSE)
+#dend %>% rect.dendrogram(k=3, lty = 5, lwd = 0, x=1, col=rgb(0.1, 0.2, 0.4, 0.1)) %>% plot()
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create a vector of colors, darkgreen if am is 0, green if 1.
+my_colors <- ifelse(mtcars$am==0, "forestgreen", "green")
+
+# Make the dendrogram
+par(mar=c(10,1,1,1))
+dend %>%
+  set("labels_col", value = c("skyblue", "orange", "grey"), k=3) %>%
+  set("branches_k_color", value = c("skyblue", "orange", "grey"), k = 3) %>%
+  set("leaves_pch", 19)  %>% set("nodes_cex", 0.7) %>% set("nodes_col") %>%
+  plot(axes=FALSE)
+
+# Add the colored bar
+colored_bars(colors = my_colors, dend = dend, rowLabels = "am")
+
+```
+
+#### Comparación de dos dendogramas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Make 2 dendrograms, using 2 different clustering methods
+d1 = USArrests %>% dist() %>% hclust( method="average" ) %>% as.dendrogram()
+d2 = USArrests %>% dist() %>% hclust( method="complete" ) %>% as.dendrogram()
+ 
+# Custom these kendo, and place them in a list
+dl <- dendlist(
+  d1 %>% 
+    set("labels_col", value = c("skyblue", "orange", "grey"), k=3) %>%
+    set("branches_lty", 1) %>%
+    set("branches_k_color", value = c("skyblue", "orange", "grey"), k = 3),
+  d2 %>% 
+    set("labels_col", value = c("skyblue", "orange", "grey"), k=3) %>%
+    set("branches_lty", 1) %>%
+    set("branches_k_color", value = c("skyblue", "orange", "grey"), k = 3)
+)
+ 
+# Plot them together
+tanglegram(dl, 
+           common_subtrees_color_lines = FALSE, highlight_distinct_edges  = TRUE, highlight_branches_lwd=FALSE, 
+           margin_inner=7,
+           lwd=2
+)
+
+```
+
+#### Dendograma jerárquico
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# data: edge list
+d1=data.frame(from="origin", to=paste("group", seq(1,7), sep=""))
+d2=data.frame(from=rep(d1$to, each=7), to=paste("subgroup", seq(1,49), sep="_"))
+edges=rbind(d1, d2)
+ 
+# We can add a second data frame with information for each node!
+name=unique(c(as.character(edges$from), as.character(edges$to)))
+vertices=data.frame(
+  name=name,
+  group=c( rep(NA,8) ,  rep( paste("group", seq(1,7), sep=""), each=7)),
+  cluster=sample(letters[1:4], length(name), replace=T),
+  value=sample(seq(10,30), length(name), replace=T)
+)
+ 
+# Create a graph object
+mygraph <- graph_from_data_frame( edges, vertices=vertices)
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggraph(mygraph, layout = 'dendrogram') + 
+  geom_edge_diagonal() +
+  geom_node_text(aes( label=name, filter=leaf, color=group) , angle=90 , hjust=1, nudge_y=-0.1) +
+  geom_node_point(aes(filter=leaf, size=value, color=group) , alpha=0.6) +
+  ylim(-.6, NA) +
+  theme(legend.position="none")
+```
+
+
+#### Dendograma circular
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# create a data frame giving the hierarchical structure of your individuals
+d1=data.frame(from="origin", to=paste("group", seq(1,10), sep=""))
+d2=data.frame(from=rep(d1$to, each=10), to=paste("subgroup", seq(1,100), sep="_"))
+edges=rbind(d1, d2)
+ 
+# create a vertices data.frame. One line per object of our hierarchy
+vertices = data.frame(
+  name = unique(c(as.character(edges$from), as.character(edges$to))) , 
+  value = runif(111)
+) 
+# Let's add a column with the group of each name. It will be useful later to color points
+vertices$group = edges$from[ match( vertices$name, edges$to ) ]
+ 
+ 
+#Let's add information concerning the label we are going to add: angle, horizontal adjustement and potential flip
+#calculate the ANGLE of the labels
+vertices$id=NA
+myleaves=which(is.na( match(vertices$name, edges$from) ))
+nleaves=length(myleaves)
+vertices$id[ myleaves ] = seq(1:nleaves)
+vertices$angle= 90 - 360 * vertices$id / nleaves
+ 
+# calculate the alignment of labels: right or left
+# If I am on the left part of the plot, my labels have currently an angle < -90
+vertices$hjust<-ifelse( vertices$angle < -90, 1, 0)
+ 
+# flip angle BY to make them readable
+vertices$angle<-ifelse(vertices$angle < -90, vertices$angle+180, vertices$angle)
+ 
+# Create a graph object
+mygraph <- graph_from_data_frame( edges, vertices=vertices )
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+  geom_edge_diagonal(colour="grey") +
+  scale_edge_colour_distiller(palette = "RdPu") +
+  geom_node_text(aes(x = x*1.15, y=y*1.15, filter = leaf, label=name, angle = angle, hjust=hjust, colour=group), size=2.7, alpha=1) +
+  geom_node_point(aes(filter = leaf, x = x*1.07, y=y*1.07, colour=group, size=value, alpha=0.2)) +
+  scale_colour_manual(values= rep( brewer.pal(9,"Paired") , 30)) +
+  scale_size_continuous( range = c(0.1,10) ) +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(c(0,0,0,0),"cm"),
+  ) +
+  expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
+
+```
+
+
+
+### Redes sociales
+
+#### Redes sociales simples
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create data
+set.seed(1)
+data=matrix(sample(0:1, 100, replace=TRUE, prob=c(0.8,0.2)), nc=10)
+network=graph_from_adjacency_matrix(data , mode='undirected', diag=F )
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Default network
+par(mar=c(0,0,0,0))
+plot(network)
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+plot(network,
+    vertex.color = rgb(0.8,0.2,0.2,0.9),           # Node color
+    vertex.frame.color = "Forestgreen",            # Node border color
+    vertex.shape=c("circle","square"),             # One of “none”, “circle”, “square”, “csquare”, “rectangle” “crectangle”, “vrectangle”, “pie”, “raster”, or “sphere”
+    vertex.size=c(15:24),                          # Size of the node (default is 15)
+    vertex.size2=NA,                               # The second size of the node (e.g. for a rectangle)
+    )
+
+```
+
+#### Fromas en las redes 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create data
+data=matrix(sample(0:1, 400, replace=TRUE, prob=c(0.8,0.2)), nrow=20)
+network=graph_from_adjacency_matrix(data , mode='undirected', diag=F )
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+par(mfrow=c(2,2), mar=c(1,1,1,1))
+plot(network, layout=layout.sphere, main="sphere")
+plot(network, layout=layout.circle, main="circle")
+plot(network, layout=layout.random, main="random")
+plot(network, layout=layout.fruchterman.reingold, main="fruchterman.reingold")
+```
+
+#### Otros formatos de visualizar las redes 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Create fake data
+src <- c("A", "A", "A", "A",
+        "B", "B", "C", "C", "D")
+target <- c("B", "C", "D", "J",
+            "E", "F", "G", "H", "I")
+networkData <- data.frame(src, target)
+
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Plot
+simpleNetwork(networkData)
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+data(MisLinks)
+data(MisNodes)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+forceNetwork(Links = MisLinks, Nodes = MisNodes,
+            Source = "source", Target = "target",
+            Value = "value", NodeID = "name",
+            Group = "group", opacity = 0.8)
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+URL <- paste0(
+        "https://cdn.rawgit.com/christophergandrud/networkD3/",
+        "master/JSONdata//flare.json")
+
+## Convert to list format
+Flare <- jsonlite::fromJSON(URL, simplifyDataFrame = FALSE)
+
+# Use subset of data for more readable diagram
+Flare$children = Flare$children[1:3]
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+radialNetwork(List = Flare, fontSize = 10, opacity = 0.9)
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+diagonalNetwork(List = Flare, fontSize = 10, opacity = 0.9)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+hc <- hclust(dist(USArrests), "ave")
+
+dendroNetwork(hc, height = 600)
+```
+
+
+### Diagrama de Sankey
+
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Usually what you have is a connection data frame: a list of flows with intensity for each flow
+links=data.frame(source=c("group_A","group_A", "group_B", "group_C", "group_C", "group_E"), target=c("group_C","group_D", "group_E", "group_F", "group_G", "group_H"), value=c(2,3, 2, 3, 1, 3))
+ 
+# From these flows we need to create a node data frame: it lists every entities involved in the flow
+nodes=data.frame(name=c(as.character(links$source), as.character(links$target)) %>% unique())
+ 
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+links$IDsource=match(links$source, nodes$name)-1 
+links$IDtarget=match(links$target, nodes$name)-1
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+sankeyNetwork(Links = links, Nodes = nodes,
+              Source = "IDsource", Target = "IDtarget",
+              Value = "value", NodeID = "name", 
+              sinksRight=FALSE)
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Add a 'group' column to each connection:
+links$group=as.factor(c("type_a","type_a","type_a","type_b","type_b","type_b"))
+ 
+# Add a 'group' column to each node. Here I decide to put all of them in the same group to make them grey
+nodes$group=as.factor(c("my_unique_group"))
+ 
+# Give a color for each group:
+my_color <- 'd3.scaleOrdinal() .domain(["type_a", "type_b", "my_unique_group"]) .range(["blue", "pink", "grey"])'
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+sankeyNetwork(Links = links, Nodes = nodes, Source = "IDsource", Target = "IDtarget", Value = "value", NodeID = "name", colourScale=my_color, LinkGroup="group", NodeGroup="group")
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Load energy projection data
+URL <- "https://cdn.rawgit.com/christophergandrud/networkD3/master/JSONdata/energy.json"
+Energy <- jsonlite::fromJSON(URL)
+ 
+# Now we have 2 data frames: a 'links' data frame with 3 columns (from, to, value), and a 'nodes' data frame that gives the name of each node.
+head( Energy$links )
+head( Energy$nodes )
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+sankeyNetwork(Links = Energy$links, Nodes = Energy$nodes, Source = "source",
+              Target = "target", Value = "value", NodeID = "name",
+              units = "TWh", fontSize = 12, nodeWidth = 30)
+```
+
+
+### Diagrama circular
+
+#### Diagrama circular básico
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create data
+data = data.frame(
+    factor = sample(letters[1:8], 1000, replace = TRUE),
+    x = rnorm(1000), 
+    y = runif(1000)
+    )
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# custom general parameters:
+par(mar = c(1, 1, 1, 1), bg=rgb(0.4,0.1,0.7,0.05) ) 
+circos.par("track.height" = 0.6)
+
+
+
+# Step1: Initialize
+circos.initialize(factors = data$factor, x = data$x)
+
+# Step2: Build regions. 
+circos.trackPlotRegion(factors = data$factor, y = data$y, panel.fun = function(x, y) {
+    circos.axis(
+        h="top",                   # x axis on the inner or outer part of the track?
+        labels=TRUE,               # show the labels of the axis?
+        major.tick=TRUE,           # show ticks?
+        labels.cex=0.5,            # labels size (higher=bigger)
+        labels.font=1,             # labels font (1, 2, 3 , 4)
+        direction="outside",       # ticks point to the outside or inside of the circle ?
+        minor.ticks=4,             # Number of minor (=small) ticks
+        major.tick.percentage=0.1, # The size of the ticks in percentage of the track height
+        lwd=2                      # thickness of ticks and x axis.
+        )
+    })
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create data
+data = data.frame(
+    factor = sample(letters[1:8], 1000, replace = TRUE),
+    x = rnorm(1000), 
+    y = runif(1000)
+    )
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+# Step1: Initialise the chart giving factor and x-axis.
+circos.initialize( factors=data$factor, x=data$x )
+ 
+# Step 2: Build the regions. 
+circos.trackPlotRegion(factors = data$factor, y = data$y, panel.fun = function(x, y) {
+    circos.axis()
+    })
+ 
+# Step 3: Add points
+circos.trackPoints(data$factor, data$x, data$y, col = "blue", pch = 16, cex = 0.5)
+```
+
+https://www.r-graph-gallery.com/chord-diagram/
+
+https://www.r-graph-gallery.com/224-basic-circular-plot/
+
+
+### Hierarchical edge bundling
+
+#### Algunos  Hierarchical edge bundling
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+d1=data.frame(from="origin", to=paste("group", seq(1,10), sep=""))
+d2=data.frame(from=rep(d1$to, each=10), to=paste("subgroup", seq(1,100), sep="_"))
+hierarchy=rbind(d1, d2)
+
+vertices = data.frame(name = unique(c(as.character(hierarchy$from), as.character(hierarchy$to))) ) 
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+# Create a graph object with the igraph library
+mygraph <- graph_from_data_frame( hierarchy, vertices=vertices )
+# This is a network object, you visualize it as a network like shown in the network section!
+ 
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+  geom_edge_diagonal(alpha=0.1) +
+  geom_conn_bundle(data = get_con(from = c(18,20,30), to = c(19, 50, 70)), alpha=1, width=1, colour="skyblue", tension = 0) +
+  theme_void()
+ 
+ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+  geom_edge_diagonal(alpha=0.1) +
+  geom_conn_bundle(data = get_con(from = c(18,20,30), to = c(19, 50, 70)), alpha=1, width=1, colour="skyblue", tension = 1) +
+  theme_void()
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+ # create a dataframe with connection between leaves (individuals)
+all_leaves=paste("subgroup", seq(1,100), sep="_")
+connect=rbind( data.frame( from=sample(all_leaves, 100, replace=T) , to=sample(all_leaves, 100, replace=T)), data.frame( from=sample(head(all_leaves), 30, replace=T) , to=sample( tail(all_leaves), 30, replace=T)), data.frame( from=sample(all_leaves[25:30], 30, replace=T) , to=sample( all_leaves[55:60], 30, replace=T)), data.frame( from=sample(all_leaves[75:80], 30, replace=T) , to=sample( all_leaves[55:60], 30, replace=T)) )
+ 
+# The connection object must refer to the ids of the leaves:
+from = match( connect$from, vertices$name)
+to = match( connect$to, vertices$name)
+
+# plot
+ggraph(mygraph, layout = 'dendrogram', circular = TRUE) + 
+  geom_conn_bundle(data = get_con(from = from, to = to), alpha=0.2, colour="skyblue", tension = 0.9) + 
+  geom_node_point(aes(filter = leaf, x = x*1.05, y=y*1.05)) +
+  theme_void()
+
+```
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+
+
+```
+
+
+### Mapas:  Conexion en los mapas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+par(mar=c(0,0,0,0))
+map('world',col="#f2f2f2", fill=TRUE, bg="white", lwd=0.05,mar=rep(0,4),border=0, ylim=c(-80,80) )
+
+
+
+Buenos_aires=c(-58,-34)
+Paris=c(2,49)
+Melbourne=c(145,-38)
+data=rbind(Buenos_aires, Paris, Melbourne) %>% as.data.frame()
+colnames(data)=c("long","lat")
+
+
+
+points(x=data$long, y=data$lat, col="slateblue", cex=3, pch=20)
+
+# Connection between Buenos Aires and Paris
+inter <- gcIntermediate(Paris,  Buenos_aires, n=50, addStartEnd=TRUE, breakAtDateLine=F)             
+lines(inter, col="slateblue", lwd=2)
+ 
+# Between Paris and Melbourne
+inter <- gcIntermediate(Melbourne,  Paris, n=50, addStartEnd=TRUE, breakAtDateLine=F)             
+lines(inter, col="slateblue", lwd=2)
+
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+plot_my_connection=function( dep_lon, dep_lat, arr_lon, arr_lat, ...){
+	inter <- gcIntermediate(c(dep_lon, dep_lat), c(arr_lon, arr_lat), n=50, addStartEnd=TRUE, breakAtDateLine=F)             
+	inter=data.frame(inter)
+	diff_of_lon=abs(dep_lon) + abs(arr_lon)
+	if(diff_of_lon > 180){
+		lines(subset(inter, lon>=0), ...)
+		lines(subset(inter, lon<0), ...)
+	}else{
+		lines(inter, ...)
+		}
+}
+
+map('world',col="#f2f2f2", fill=TRUE, bg="white", lwd=0.05,mar=rep(0,4),border=0, ylim=c(-80,80) )
+points(x=data$long, y=data$lat, col="slateblue", cex=3, pch=20)
+ 
+plot_my_connection(Paris[1], Paris[2], Melbourne[1], Melbourne[2], col="slateblue", lwd=2)
+plot_my_connection(Buenos_aires[1], Buenos_aires[2], Melbourne[1], Melbourne[2], col="slateblue", lwd=2)
+plot_my_connection(Buenos_aires[1], Buenos_aires[2], Paris[1], Paris[2], col="slateblue", lwd=2)
+
+
+```
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+
+```
+
+
+## Cuadros y tablas dinámicas {.tabset .tabset-fade}
+
+### DT tables
+
+**Algunos ejemplos**
+
+
+*** 
+***
+
+El DT estándar 
+
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+datatable(iris)
+```
+
+*** 
+***
+
+Añadimos bordes a la tabla
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+datatable(head(iris), class = 'cell-border stripe')
+```
+
+*** 
+***
+
+Nombres en las filas 
+ 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+datatable(head(mtcars))
+```
+
+** Etc, etc etc. En el siguiente enlace: **
+
+https://rstudio.github.io/DT/
+
+
+### Tablas con kableExtra
+
+Otra forma de hacer tablas personalisadas y mediante el formato de kable. El siguiente enlace es una referencia:
+
+https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+dt <- mtcars[1:5, 1:6]
+
+```
+
+*** 
+***
+
+La tabla estándar del kable... no es lo mejor pero algo ordena
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+kable(dt)
+```
+
+*** 
+***
+
+Una tabla con color en las filas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+kable(dt) %>%
+  kable_styling("striped", full_width = F) %>%
+  column_spec(5:7, bold = T) %>%
+  row_spec(3:5, bold = T, color = "white", background = "#D7261E")
+```
+
+*** 
+***
+
+Una tabla con color en los números y un poco de estilo en los números 
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+mtcars[1:10, 1:2] %>%
+  mutate(
+    car = row.names(.),
+    mpg = cell_spec(mpg, color = ifelse(mpg > 20, "red", "blue")),
+    cyl = cell_spec(cyl, color = "white", align = "c", angle = 45, 
+                    background = factor(cyl, c(4, 6, 8), 
+                                        c("#666666", "#999999", "#BBBBBB")))
+  ) %>%
+  select(car, mpg, cyl) %>%
+  kable(escape = F) %>%
+  kable_styling("striped", full_width = F)
+```
+
+*** 
+***
+
+Colores y fondos en los números
+
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+iris[1:10, ] %>%
+  mutate_if(is.numeric, function(x) {
+    cell_spec(x, bold = T, 
+              color = spec_color(x, end = 0.9),
+              font_size = spec_font_size(x))
+  }) %>%
+  mutate(Species = cell_spec(
+    Species, color = "white", bold = T,
+    background = spec_color(1:10, end = 0.9, option = "A", direction = -1)
+  )) %>%
+  kable(escape = F, align = "c") %>%
+  kable_styling(c("striped", "condensed"), full_width = F)
+```
+ 
+***
+***
+ 
+Una table integrada con el formattable
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+mtcars[1:5, 1:4] %>%
+  mutate(
+    car = row.names(.),
+    mpg = color_tile("white", "orange")(mpg),
+    cyl = cell_spec(cyl, angle = (1:5)*60, 
+                    background = "red", color = "white", align = "center"),
+    disp = ifelse(disp > 200,
+                  cell_spec(disp, color = "red", bold = T),
+                  cell_spec(disp, color = "green", italic = T)),
+    hp = color_bar("lightgreen")(hp)
+  ) %>%
+  select(car, everything()) %>%
+  kable(escape = F) %>%
+  kable_styling("hover", full_width = F) %>%
+  column_spec(5, width = "3cm") %>%
+  add_header_above(c(" ", "Hello" = 2, "World" = 2))
+```
+
+### Tablas dinámicas
+
+```{r echo=FALSE, error=FALSE ,message=FALSE, warning=FALSE}
+
+devtools::install_github(c("ramnathv/htmlwidgets", "smartinsightsfromdata/rpivotTable"))
+
+library(rpivotTable)
+
+data(mtcars)
+rpivotTable(mtcars)
+
+```
+
+
+
+## El Story-line {.tabset .tabset-fade}
+
+
+

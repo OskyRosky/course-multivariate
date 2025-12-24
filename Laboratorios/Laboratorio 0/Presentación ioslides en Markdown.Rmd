@@ -1,0 +1,96 @@
+---
+title: "Presentación en Markdown"
+author: "Oscar Centeno Mora - IAM"
+date: "Ejemplo de presentación de Markdown"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introdución
+
+Escribir la intro
+
+## Objetivos
+
+Objetivo general del análisis, y los objetivos específicos.
+
+## Justificación
+
+La razón de ser o el por qué de hacer este análisis.
+
+## Metodologia: materiales y métodos (1)
+
+La métodología posee dos partes:
+
+1. Material: datos y los insumos o materia prima (software, etc)
+
+## Metodologia: materiales y métodos (2)
+
+2. Métodos: método de análisis y técnica utilizada
+
+Acá se explica tanto la forma de analizar la data, la forma matemática del
+modelo, entre otros.
+
+## Resultados (1)
+
+Estadísticas descriptivas
+
+## Resultados (2)
+
+Resultados Técnica de análisis
+
+## Resultados (3)
+
+Resultados Técnica de análisis
+
+## Resultados (4)
+
+Resultados Técnica de análisis
+
+## Conclusión
+
+Se concluye sobre el análisis. Hasta acá se puede brindar una valoración.
+
+## Discusión
+
+Abre la posibilidad a otras reflexiones, contextualiza el tema, y otras formas
+de abordaje
+
+## Resumiendo, composición de la presentación
+
+- Introdución
+- Objetivos
+- Justificación
+- Metodologia: materiales y métodos
+- Resultados
+- Conclsión
+- Discusión
+
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(cars)
+```
+
